@@ -31,7 +31,7 @@ public class AuthService {
         user.setUsername(data.getUsername());
         user.setPassword(hashedPassword);
         user.setEmail(data.getEmail());
-        user.setMaxStorageSpace((long) confProps.getAvailableStoragePerAccountBytes());
+        user.setMaxStorageSpace(confProps.getAvailableStoragePerAccountBytes());
 
         userService.saveNewUser(user);
 

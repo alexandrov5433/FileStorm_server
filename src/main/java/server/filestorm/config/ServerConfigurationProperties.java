@@ -48,8 +48,8 @@ public class ServerConfigurationProperties {
         return Integer.parseInt(available_storage_per_account_gb);
     }
 
-    public int getAvailableStoragePerAccountBytes() {
-        return Integer.parseInt(available_storage_per_account_gb) * 1024 * 1024;
+    public Long getAvailableStoragePerAccountBytes() {
+        return Long.parseLong(available_storage_per_account_gb) * 1024 * 1024 * 1024;
     }
 
     public void setAvailableStoragePerAccountGb(String gb) {
