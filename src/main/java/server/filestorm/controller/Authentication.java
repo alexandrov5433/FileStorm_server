@@ -41,7 +41,7 @@ public class Authentication {
     @Autowired
     private UserService userService;
 
-    @PostMapping(path = "/api/auth/register", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    @PostMapping(path = "/api/auth/register")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> register(RegistrationData data) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
 
@@ -78,7 +78,8 @@ public class Authentication {
             userService.addRootDirectory(user, rootUserDir);
 
             // remove password hash from User; this change is not saved to the DB so the
-            // hash stays intact. Done by exception in the controller. When done in the service, the password in the DB is also overridden.
+            // hash stays intact. Done by exception in the controller. When done in the
+            // service, the password in the DB is also overridden.
             user.setPassword("TheHashedPasswordStaysOnTheServer");
 
             // responde 200 with cookie
@@ -89,7 +90,7 @@ public class Authentication {
         return res;
     }
 
-    @PostMapping(path = "/api/auth/login", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    @PostMapping(path = "/api/auth/login")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> login(LoginData data) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
 
@@ -137,9 +138,15 @@ public class Authentication {
     public DeferredResult<ResponseEntity<ApiResponse<?>>> validateSession(CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
+
+        // delete cookie from client
+        String setCookieHeaderDeletionValue = String
+                .format("FileStormUserSession=%1$s; Path=/; Max-Age=0; HttpOnly; Secure;", "");
+
         if (session == null) {
             res.setResult(
                     ResponseEntity.badRequest()
+                            .header("Set-Cookie", setCookieHeaderDeletionValue)
                             .body(new ApiResponse<>("No session.")));
         } else {
             Map<String, Object> claims = session.getClaims();
@@ -148,18 +155,16 @@ public class Authentication {
             if (id == null || username == null) {
                 res.setResult(
                         ResponseEntity.badRequest()
+                                .header("Set-Cookie", setCookieHeaderDeletionValue)
                                 .body(new ApiResponse<>("No session.")));
                 return res;
             }
 
             User user = authService.validateSessionData(id, username);
             if (user == null) {
-                // also delete cookie from client
-                String setCookieHeaderValue = String
-                        .format("FileStormUserSession=%1$s; Path=/; Max-Age=0; HttpOnly; Secure;", "");
                 res.setResult(
                         ResponseEntity.badRequest()
-                                .header("Set-Cookie", setCookieHeaderValue)
+                                .header("Set-Cookie", setCookieHeaderDeletionValue)
                                 .body(new ApiResponse<>("No session.")));
             } else {
                 res.setResult(
