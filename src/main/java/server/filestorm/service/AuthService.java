@@ -1,5 +1,7 @@
 package server.filestorm.service;
 
+import java.util.ArrayList;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +25,21 @@ public class AuthService {
     public AuthResult<?> registerUser(RegistrationData data) {
         if (!data.isDataValid()) {
             return new AuthResult<AuthValidationResult[]>(true, data.getValidationData());
+        }
+
+        // check email and username availability
+        boolean isUsernameAvailable = userService.isUsernameAvailable(data.getUsername());
+        boolean isEmailAvailable = userService.isEmailAvailable(data.getEmail());
+        if (!isUsernameAvailable ||!isEmailAvailable) {
+            ArrayList<AuthValidationResult> authValidationResults = new ArrayList<AuthValidationResult>();
+            if (!isUsernameAvailable) {
+                authValidationResults.add(new AuthValidationResult("username", false, "Username is taken."));
+            }
+            if (!isEmailAvailable) {
+                authValidationResults.add(new AuthValidationResult("email", false, "Email is in use."));
+            }
+
+            return new AuthResult<AuthValidationResult[]>(true, authValidationResults.toArray(new AuthValidationResult[0]));
         }
 
         String hashedPassword = BcryptUtil.hash(data.getPassword());
@@ -82,8 +99,8 @@ public class AuthService {
     }
 
     public User validateSessionData(Integer id, String username) {
-        User user = userService.findUserByUsername(username);
-        if (user == null || user.getId() != id) {
+        User user = userService.findUserByUsernameAndId(username, id);
+        if (user == null) {
             return null;
         }
 

@@ -40,6 +40,30 @@ public class UserService {
         return userRepository.findUserByUsername(username).orElse(null);
     }
 
+    public User findUserByUsernameAndId(String username, Integer id) {
+        return userRepository.findUserByUsernameAndId(username, id).orElse(null);
+    }
+
+    /**
+     * Checks is the given email is available - not taken by an other user - by searching for an existing user with this exact email.
+     * @param email Email to search for.
+     * @return true if the email may be used - is not already in use.
+     */
+    public Boolean isEmailAvailable(String email) {
+        User user = userRepository.searchForUserWithThisEmail(email).orElse(null);
+        return user == null ? true : false;
+    }
+
+    /**
+     * Checks is the given username is available - not taken by an other user - by searching for an existing user with this exact username.
+     * @param username The username to search for.
+     * @return true if the username may be used - is not already in use.
+     */
+    public Boolean isUsernameAvailable(String username) {
+        User user = userRepository.findUserByUsername(username).orElse(null);
+        return user == null ? true : false;
+    }
+
     /**
      * Finds a User with the given id.
      * 
