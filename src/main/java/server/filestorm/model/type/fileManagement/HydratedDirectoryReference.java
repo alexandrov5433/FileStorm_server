@@ -2,28 +2,40 @@ package server.filestorm.model.type.fileManagement;
 
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map.Entry;
 
 public class HydratedDirectoryReference implements Serializable {
     private String name;
     private HashMap<String, ChunkReference> hydratedChunkRefs; // Map<NameOfChunk, ChunkReference>
-    private HashMap<String, DirectoryReference> directoryRefs; // Map<NameOfDirectory, ref>
+    private HashMap<String, Integer> simpleDirectoryRefs; // Map<NameOfDirectory, ref>
 
     public HydratedDirectoryReference() {
         this.name = null;
         this.hydratedChunkRefs = new HashMap<String, ChunkReference>();
-        this.directoryRefs = new HashMap<String, DirectoryReference>();
+        this.simpleDirectoryRefs = new HashMap<String, Integer>();
     }
     
     public HydratedDirectoryReference(String name) {
         this.name = name;
         this.hydratedChunkRefs = new HashMap<String, ChunkReference>();
-        this.directoryRefs = new HashMap<String, DirectoryReference>();
+        this.simpleDirectoryRefs = new HashMap<String, Integer>();
     }
 
     public HydratedDirectoryReference(String name, HashMap<String, DirectoryReference> directoryRefs) {
         this.name = name;
         this.hydratedChunkRefs = new HashMap<String, ChunkReference>();
-        this.directoryRefs = directoryRefs;
+
+        HashMap<String, Integer> simpleDirRef = new HashMap<String, Integer>();
+        Iterator<Entry<String, DirectoryReference>> itr = directoryRefs.entrySet().iterator();
+        while (itr.hasNext()) {
+            Entry<String, DirectoryReference> entry = itr.next();
+            String dirName = entry.getKey();
+            DirectoryReference dirRef = entry.getValue();
+
+            simpleDirRef.put(dirName, dirRef.getContentSize());
+        }
+        this.simpleDirectoryRefs = simpleDirRef;
     }
 
     public String getName() {
@@ -42,12 +54,12 @@ public class HydratedDirectoryReference implements Serializable {
         this.hydratedChunkRefs = hydratedChunkRefs;
     }
 
-    public HashMap<String, DirectoryReference> getDirectoryRefs() {
-        return this.directoryRefs;
+    public HashMap<String, Integer> getSimpleDirectoryRefs() {
+        return this.simpleDirectoryRefs;
     }
 
-    public void setDirectoryRefs(HashMap<String, DirectoryReference> directoryRefs) {
-        this.directoryRefs = directoryRefs;
+    public void setSimpleDirectoryRefs(HashMap<String, Integer> directoryRefs) {
+        this.simpleDirectoryRefs = directoryRefs;
     }
 
     public void addHydratedChunkRef(ChunkReference chunkRef) {
