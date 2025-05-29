@@ -13,6 +13,7 @@ import server.filestorm.model.type.authentication.AuthResult;
 import server.filestorm.model.type.authentication.AuthValidationResult;
 import server.filestorm.model.type.authentication.LoginData;
 import server.filestorm.model.type.authentication.RegistrationData;
+import server.filestorm.model.type.authentication.UserReference;
 import server.filestorm.model.type.fileManagement.DirectoryReference;
 import server.filestorm.model.entity.User;
 import server.filestorm.service.AuthService;
@@ -76,15 +77,10 @@ public class Authentication {
             // add user storage dir to his DB reference
             userService.addRootDirectory(user, rootUserDir);
 
-            // remove password hash from User; this change is not saved to the DB so the
-            // hash stays intact. Done by exception in the controller. When done in the
-            // service, the password in the DB is also overridden.
-            user.setPassword("TheHashedPasswordStaysOnTheServer");
-
             // responde 200 with cookie
             res.setResult(ResponseEntity.ok()
                     .header("Set-Cookie", setCookieHeaderValue)
-                    .body(new ApiResponse<User>("Registration successful.", user)));
+                    .body(new ApiResponse<UserReference>("Registration successful.", new UserReference(user))));
         }
         return res;
     }
@@ -113,7 +109,7 @@ public class Authentication {
 
             res.setResult(ResponseEntity.ok()
                     .header("Set-Cookie", setCookieHeaderValue)
-                    .body(new ApiResponse<User>("Login successful.", user)));
+                    .body(new ApiResponse<UserReference>("Login successful.", new UserReference(user))));
         }
         return res;
     }
@@ -168,10 +164,10 @@ public class Authentication {
             } else {
                 res.setResult(
                         ResponseEntity.ok()
-                                .body(new ApiResponse<User>("Session valid.", user)));
+                                .body(new ApiResponse<UserReference>("Session valid.",
+                                        new UserReference(user))));
             }
         }
         return res;
     }
-
 }

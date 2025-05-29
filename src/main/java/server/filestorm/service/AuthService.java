@@ -52,7 +52,6 @@ public class AuthService {
 
         userService.saveNewUser(user);
 
-        // override password in controller before sending to client !!!
         return new AuthResult<User>(false, user);
     }
 
@@ -91,10 +90,6 @@ public class AuthService {
             });
         }
 
-        // remove password hash from User; this change is not saved to the DB so the
-        // hash stays intact
-        user.setPassword("TheHashedPasswordStaysOnTheServer");
-
         return new AuthResult<User>(false, user);
     }
 
@@ -103,11 +98,6 @@ public class AuthService {
         if (user == null) {
             return null;
         }
-
-        // remove password hash from User; this change is not saved to the DB so the
-        // hash stays intact
-        user.setPassword("TheHashedPasswordStaysOnTheServer");
-
         return user;
     }
 }
