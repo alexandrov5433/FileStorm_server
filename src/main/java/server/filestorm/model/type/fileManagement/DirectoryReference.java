@@ -3,6 +3,8 @@ package server.filestorm.model.type.fileManagement;
 import java.io.Serializable;
 import java.util.HashMap;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class DirectoryReference implements Serializable {
 
     private String name;
@@ -51,5 +53,12 @@ public class DirectoryReference implements Serializable {
 
     public Boolean removeChunkRef(String chunkName, Integer chunkId) {
         return this.chunkRefs.remove(chunkName, chunkId);
+    }
+
+    @JsonIgnore
+    public int getContentSize() {
+        int chunksCount = this.chunkRefs == null ? 0 : this.chunkRefs.size();
+        int directoriesCount = this.directoryRefs == null ? 0 : this.directoryRefs.size();
+        return chunksCount + directoriesCount;
     }
 }
