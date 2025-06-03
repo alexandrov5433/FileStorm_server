@@ -186,7 +186,7 @@ public class FileSystem {
         userService.verifyDirectoryExistance(user, targetDirectoryPath);
 
         // return directory data
-        HydratedDirectoryReference hydratedDirRef = userService.getHydratedDirectoryData(user, targetDirectoryPath)
+        HydratedDirectoryReference hydratedDirRef = userService.getHydratedDirectoryDataForUser(user, targetDirectoryPath)
                 .orElseThrow(() -> new FileManagementException("Could not get directory's data."));
 
         res.setResult(ResponseEntity.ok()
@@ -221,8 +221,11 @@ public class FileSystem {
         // add sub dir reference in DB
         userService.addDirectory(user, dirRef, targetSubDirPath);
 
+        HydratedDirectoryReference hydratedDirRef = userService.getHydratedDirectoryDataFromDirRef(dirRef)
+                .orElseThrow(() -> new FileManagementException("Could not get directory's data."));
+
         res.setResult(ResponseEntity.ok()
-                .body(new ApiResponse<DirectoryReference>("New directory created.", dirRef)));
+                .body(new ApiResponse<HydratedDirectoryReference>("New directory created.", hydratedDirRef)));
         return res;
     }
 

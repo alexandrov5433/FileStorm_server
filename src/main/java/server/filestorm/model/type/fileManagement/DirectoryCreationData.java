@@ -4,6 +4,11 @@ public class DirectoryCreationData {
     private String targetDirectoryPath;
     private String newDirectoryName;
 
+    public DirectoryCreationData() {
+        this.targetDirectoryPath = null;
+        this.newDirectoryName = null;
+    }
+
     public DirectoryCreationData(String targetDirectoryPath, String newDirectoryName) {
         this.targetDirectoryPath = targetDirectoryPath;
         this.newDirectoryName = newDirectoryName;

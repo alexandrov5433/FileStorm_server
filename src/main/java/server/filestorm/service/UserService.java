@@ -292,7 +292,7 @@ public class UserService {
     }
 
     /**
-     * Returns HydratedDirectoryReference of a directory: a DirectoryReference with
+     * Returns HydratedDirectoryReference of a directory for a given User: a DirectoryReference with
      * complete Chunk data (hydratedChunkRefs) instead of Chunk references.
      * 
      * @param user          The User onwe of the directory.
@@ -303,7 +303,7 @@ public class UserService {
      *                             PathUtil.standardizeRelativePathString(targetDirPath).
      */
     @Transactional
-    public Optional<HydratedDirectoryReference> getHydratedDirectoryData(User user, String targetDirPath)
+    public Optional<HydratedDirectoryReference> getHydratedDirectoryDataForUser(User user, String targetDirPath)
             throws StorageException, ProcessingException {
         DirectoryReference currentDir = user.getStorageDirectory();
         String[] parts = PathUtil.standardizeRelativePathString(targetDirPath).split("/");
@@ -314,6 +314,18 @@ public class UserService {
             }
         }
         return Optional.ofNullable(hydrateChunkRefsFromDir(currentDir));
+    }
+
+    /**
+     * Returns HydratedDirectoryReference of a directory for a given DirectoryReference: a DirectoryReference with
+     * complete Chunk data (hydratedChunkRefs) instead of Chunk references.
+     * 
+     * @param dirRef The directory to hydrate.
+     * @return The HydratedDirectoryReference of the directory.
+     */
+    @Transactional
+    public Optional<HydratedDirectoryReference> getHydratedDirectoryDataFromDirRef(DirectoryReference dirRef) {
+        return Optional.ofNullable(hydrateChunkRefsFromDir(dirRef));
     }
 
     @Transactional
