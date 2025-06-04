@@ -1,30 +1,31 @@
 package server.filestorm.model.type.fileManagement;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
 public class HydratedDirectoryReference implements Serializable {
     private String name;
-    private HashMap<String, ChunkReference> hydratedChunkRefs; // Map<NameOfChunk, ChunkReference>
+    private ArrayList<ChunkReference> hydratedChunkRefs; // Map<NameOfChunk, ChunkReference>
     private HashMap<String, Integer> simpleDirectoryRefs; // Map<NameOfDirectory, ref>
 
     public HydratedDirectoryReference() {
         this.name = null;
-        this.hydratedChunkRefs = new HashMap<String, ChunkReference>();
+        this.hydratedChunkRefs = new ArrayList<ChunkReference>();
         this.simpleDirectoryRefs = new HashMap<String, Integer>();
     }
     
     public HydratedDirectoryReference(String name) {
         this.name = name;
-        this.hydratedChunkRefs = new HashMap<String, ChunkReference>();
+        this.hydratedChunkRefs = new ArrayList<ChunkReference>();
         this.simpleDirectoryRefs = new HashMap<String, Integer>();
     }
 
     public HydratedDirectoryReference(String name, HashMap<String, DirectoryReference> directoryRefs) {
         this.name = name;
-        this.hydratedChunkRefs = new HashMap<String, ChunkReference>();
+        this.hydratedChunkRefs = new ArrayList<ChunkReference>();
 
         HashMap<String, Integer> simpleDirRef = new HashMap<String, Integer>();
         Iterator<Entry<String, DirectoryReference>> itr = directoryRefs.entrySet().iterator();
@@ -46,11 +47,11 @@ public class HydratedDirectoryReference implements Serializable {
         this.name = name;
     }
 
-    public HashMap<String, ChunkReference> getHydratedChunkRefs() {
+    public ArrayList<ChunkReference> getHydratedChunkRefs() {
         return this.hydratedChunkRefs;
     }
 
-    public void setHydratedChunkRefs(HashMap<String, ChunkReference> hydratedChunkRefs) {
+    public void setHydratedChunkRefs(ArrayList<ChunkReference> hydratedChunkRefs) {
         this.hydratedChunkRefs = hydratedChunkRefs;
     }
 
@@ -63,6 +64,6 @@ public class HydratedDirectoryReference implements Serializable {
     }
 
     public void addHydratedChunkRef(ChunkReference chunkRef) {
-        this.hydratedChunkRefs.put(chunkRef.getName(), chunkRef);
+        this.hydratedChunkRefs.add(chunkRef);
     }
 }
