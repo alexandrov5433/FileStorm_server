@@ -24,4 +24,7 @@ public interface ChunkRepository extends JpaRepository<Chunk, Integer>{
 
     @Query("SELECT c FROM Chunk c WHERE c.owner = ?1 AND c.share_option != 'PRIVATE'")
     Optional<List<Chunk>> getFilesUserIsSharing(User owner);
+
+    @Query("SELECT c FROM Chunk c WHERE c.is_favorite = TRUE AND c.owner = ?1")
+    Optional<List<Chunk>> getFavoritesForUser(User owner);
 }

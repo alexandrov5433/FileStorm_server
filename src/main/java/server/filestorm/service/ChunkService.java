@@ -7,14 +7,13 @@ import server.filestorm.exception.FileManagementException;
 import server.filestorm.model.entity.Chunk;
 import server.filestorm.model.entity.User;
 import server.filestorm.model.repository.ChunkRepository;
+import server.filestorm.model.type.fileManagement.ChunkReference;
 
 @Service
 public class ChunkService {
 
     @Autowired
     private ChunkRepository chunkRepository;
-
-
 
     public Chunk saveChunk(Chunk chunk) {
         return chunkRepository.save(chunk);
@@ -48,5 +47,13 @@ public class ChunkService {
 
     public Integer deleteChunkByIdAndOwner(Integer chunk_id, User owner) {
         return chunkRepository.deleteChunkByIdAndOwner(chunk_id, owner);
+    }
+
+    public ChunkReference[] getFavoritesForUser(User user) {
+        return chunkRepository.getFavoritesForUser(user)
+                .map(chunkList -> chunkList.stream()
+                        .map(ChunkReference::new)
+                        .toArray(ChunkReference[]::new))
+                .orElse(new ChunkReference[0]);
     }
 }

@@ -16,6 +16,7 @@ public class ChunkReference implements Serializable{
     private String mime_type;
     private ShareOption share_option;
     private String share_link;
+    private Boolean is_favorite;
 
     public ChunkReference() {};
 
@@ -29,6 +30,7 @@ public class ChunkReference implements Serializable{
         this.mime_type = chunk.getMimeType();
         this.share_option = chunk.getShareOption();
         this.share_link = chunk.getShareLink();
+        this.is_favorite = chunk.getIsFavorite();
     };
 
     public Integer getId() {
@@ -101,5 +103,13 @@ public class ChunkReference implements Serializable{
 
     public void setShare_link(String share_link) {
         this.share_link = share_link;
+    }
+
+    public Boolean getIs_favorite() {
+        return is_favorite;
+    }
+
+    public void setIs_favorite(Boolean is_favorite) {
+        this.is_favorite = is_favorite;
     }
 }

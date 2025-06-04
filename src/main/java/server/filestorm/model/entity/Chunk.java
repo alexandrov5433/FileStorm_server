@@ -67,6 +67,9 @@ public class Chunk {
     @Column(nullable = true, length = 2500)
     private String share_link;
 
+    @Column(nullable = false)
+    private Boolean is_favorite = false;
+
 
     @PrePersist
     private void onCreate() {
@@ -76,6 +79,9 @@ public class Chunk {
         }
         if (this.share_with == null) {
             this.share_with = new HashSet<>();
+        }
+        if (this.is_favorite == null) {
+            this.is_favorite = false;
         }
     }
 
@@ -162,6 +168,14 @@ public class Chunk {
 
     public void addUserToShareWithList(User u) {
         this.share_with.add(u);
+    }
+
+    public Boolean getIsFavorite() {
+        return is_favorite;
+    }
+
+    public void setIsFavorite(Boolean is_favorite) {
+        this.is_favorite = is_favorite;
     }
 
 }

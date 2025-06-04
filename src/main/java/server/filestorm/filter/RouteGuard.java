@@ -49,6 +49,8 @@ public class RouteGuard implements Filter {
         endpointMap.put("/api/file/shared_with_me", "^GET$");
         endpointMap.put("/api/file/me_sharing", "^GET$");
         endpointMap.put("/api/file/share_with/.+", "^GET$");
+        // Favorite
+        endpointMap.put("/api/favorite", "^GET$");
 
         Iterator<Entry<String, String>> iterator = endpointMap.entrySet().iterator();
 
