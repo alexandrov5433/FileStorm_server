@@ -2,6 +2,7 @@ package server.filestorm.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import server.filestorm.exception.FileManagementException;
 import server.filestorm.model.entity.Chunk;
@@ -55,5 +56,17 @@ public class ChunkService {
                         .map(ChunkReference::new)
                         .toArray(ChunkReference[]::new))
                 .orElse(new ChunkReference[0]);
+    }
+
+    @Transactional
+    public void markChunkAsFavorite(Chunk c) {
+        c.setIsFavorite(true);
+        chunkRepository.save(c);
+    }
+    
+    @Transactional
+    public void removeChunkFromFavorite(Chunk c) {
+        c.setIsFavorite(false);
+        chunkRepository.save(c);
     }
 }
