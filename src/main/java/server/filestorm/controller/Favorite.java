@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.context.request.async.DeferredResult;
 
-import jakarta.websocket.server.PathParam;
 import server.filestorm.exception.FileManagementException;
 import server.filestorm.model.entity.Chunk;
 import server.filestorm.model.entity.User;
