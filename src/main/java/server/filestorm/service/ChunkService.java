@@ -41,10 +41,10 @@ public class ChunkService {
                 .orElseThrow(() -> new FileManagementException("A file with this ID was not found for this user."));
     }
 
-    public Chunk findChunkByNameAndOwner(String name, User owner) {
-        return chunkRepository.findChunkByNameAndOwner(name, owner)
-                .orElseThrow(() -> new FileManagementException("A file with this name was not found for this user."));
-    }
+    // public Chunk findChunkByNameAndOwner(String name, User owner) {
+    //     return chunkRepository.findChunkByNameAndOwner(name, owner)
+    //             .orElseThrow(() -> new FileManagementException("A file with this name was not found for this user."));
+    // }
 
     public Integer deleteChunkByIdAndOwner(Integer chunk_id, User owner) {
         return chunkRepository.deleteChunkByIdAndOwner(chunk_id, owner);

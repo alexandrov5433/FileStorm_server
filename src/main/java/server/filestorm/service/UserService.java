@@ -185,8 +185,8 @@ public class UserService {
             }
         }
         Integer deletedChunkId = currentDir.getChunkRefs().remove(targetChunkName);
-        chunkService.deleteChunkByIdAndOwner(deletedChunkId, user);
         Chunk c = chunkService.findById(deletedChunkId);
+        chunkService.deleteChunkByIdAndOwner(deletedChunkId, user);
         user.removeBytesInStorage(c.getSizeBytes());
         userRepository.save(user);
         return deletedChunkId;
@@ -273,7 +273,7 @@ public class UserService {
      * @param targetDirPath Path string to check.
      * @throws FileManagementException When the path string is invalid.
      */
-    public void verifyChunkRefInDirRef(User user, String targetDirPath, String targetChunkName)
+    public void verifyChunkRefInDirRef(User user, String targetDirPath, String targetChunkName, Integer targetFileId)
             throws StorageException, ProcessingException {
         // "11/my_docs/work"
         DirectoryReference currentDir = user.getStorageDirectory(); // "11"
@@ -285,7 +285,7 @@ public class UserService {
                 throw new StorageException("A directory with this name does not exists: " + parts[i]);
             }
         }
-        if (!currentDir.getChunkRefs().containsKey(targetChunkName)) {
+        if (currentDir.getChunkRefs().get(targetChunkName) != targetFileId) {
             throw new FileManagementException(
                     "A file with this name was not found in the directory: " + targetChunkName);
         }

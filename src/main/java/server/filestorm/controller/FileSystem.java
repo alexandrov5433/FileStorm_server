@@ -101,6 +101,7 @@ public class FileSystem {
     public DeferredResult<ResponseEntity<ApiResponse<?>>> deleteFile(
             @RequestParam String targetDirectoryPath,
             @RequestParam String targetFileName,
+            @RequestParam Integer targetFileId,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
@@ -109,12 +110,11 @@ public class FileSystem {
         User user = userService.findById(userId);
 
         // validate directory and file existance and ownership in DB
-        userService.verifyDirectoryExistance(user,
-                targetDirectoryPath);
-        chunkService.findChunkByNameAndOwner(targetFileName, user);
+        userService.verifyDirectoryExistance(user, targetDirectoryPath);
+        chunkService.findChunkByIdAndOwner(targetFileId, user);
 
         // check chunk existance in dir reference in DB
-        userService.verifyChunkRefInDirRef(user, targetDirectoryPath, targetFileName);
+        userService.verifyChunkRefInDirRef(user, targetDirectoryPath, targetFileName, targetFileId);
 
         // delete chunk from FS
         boolean isChunkDeleted = fileSystemService.deleteUserFile(targetDirectoryPath, targetFileName);
