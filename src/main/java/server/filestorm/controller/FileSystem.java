@@ -78,7 +78,7 @@ public class FileSystem {
 
         Long targetDirectoryId = fileUploadData.getTargetDirectoryId();
         // check upload dir and entry in DB
-        Directory directory = directoryService.getDirectory(targetDirectoryId);
+        Directory directory = directoryService.findDirectoryForUserById(targetDirectoryId, user);
 
         // check storage space availability
         Long fileSize = fileUploadData.getFile().getSize();
@@ -167,7 +167,7 @@ public class FileSystem {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
 
-        Integer userId = session.getUserId();
+        Long userId = session.getUserId();
         User user = userService.findById(userId);
 
         // check target dir starts with root user storage dir
@@ -193,9 +193,10 @@ public class FileSystem {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
 
-        String targetSubDirPath = data.getTargetDirectoryPath().trim();
-        String newDirName = data.getNewDirectoryName().trim();
-        Integer userId = session.getUserId();
+        Long targetDirectoryId = data.getTargetDirectoryId();
+        String newDirName = PathUtil.sanitizeFileName(data.getNewDirectoryName());
+
+        Long userId = session.getUserId();
         User user = userService.findById(userId);
 
         // check newDirName
@@ -204,20 +205,15 @@ public class FileSystem {
                     "The name of the new directory is not valid.");
         }
 
-        // check sub dir path string
-        PathUtil.verifyRelativePath(targetSubDirPath, userId);
+        // check target dir (sub dir)
+        Directory parentDirectory = directoryService.findDirectoryForUserById(targetDirectoryId, user);
 
-        // create sub dir in FS
-        DirectoryReference dirRef = fileSystemService.createSubDirectoryForUser(targetSubDirPath, newDirName);
+        // create new dir
+        Directory newDirectory = directoryService.createNewDirectory(newDirName, user, parentDirectory);
 
-        // add sub dir reference in DB
-        userService.addDirectory(user, dirRef, targetSubDirPath);
-
-        HydratedDirectoryReference hydratedDirRef = userService.getHydratedDirectoryDataFromDirRef(dirRef)
-                .orElseThrow(() -> new FileManagementException("Could not get directory's data."));
 
         res.setResult(ResponseEntity.ok()
-                .body(new ApiResponse<HydratedDirectoryReference>("New directory created.", hydratedDirRef)));
+                .body(new ApiResponse<DirectoryReference>("New directory created.", new DirectoryReference(newDirectory))));
         return res;
     }
 
