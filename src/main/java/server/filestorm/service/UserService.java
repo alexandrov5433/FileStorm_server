@@ -284,56 +284,56 @@ public class UserService {
     //     }
     // }
 
-    /**
-     * Returns HydratedDirectoryReference of a directory for a given User: a DirectoryReference with
-     * complete Chunk data (hydratedChunkRefs) instead of Chunk references.
-     * 
-     * @param user          The User onwe of the directory.
-     * @param targetDirPath The directory to hydrate.
-     * @return The HydratedDirectoryReference of the directory.
-     * @throws StorageException    If the given targetDirPath is invalid.
-     * @throws ProcessingException From
-     *                             PathUtil.standardizeRelativePathString(targetDirPath).
-     */
-    @Transactional
-    public Optional<HydratedDirectoryReference> getHydratedDirectoryDataForUser(User user, String targetDirPath)
-            throws StorageException, ProcessingException {
-        DirectoryReference currentDir = user.getStorageDirectory();
-        String[] parts = PathUtil.standardizeRelativePathString(targetDirPath).split("/");
-        for (int i = 1; i < parts.length; i++) {
-            currentDir = currentDir.getDirectoryRefs().get(parts[i]);
-            if (currentDir == null) {
-                throw new StorageException("A directory with this name does not exists: " + parts[i]);
-            }
-        }
-        return Optional.ofNullable(hydrateChunkRefsFromDir(currentDir));
-    }
+    // /**
+    //  * Returns HydratedDirectoryReference of a directory for a given User: a DirectoryReference with
+    //  * complete Chunk data (hydratedChunkRefs) instead of Chunk references.
+    //  * 
+    //  * @param user          The User onwe of the directory.
+    //  * @param targetDirPath The directory to hydrate.
+    //  * @return The HydratedDirectoryReference of the directory.
+    //  * @throws StorageException    If the given targetDirPath is invalid.
+    //  * @throws ProcessingException From
+    //  *                             PathUtil.standardizeRelativePathString(targetDirPath).
+    //  */
+    // @Transactional
+    // public Optional<HydratedDirectoryReference> getHydratedDirectoryDataForUser(User user, String targetDirPath)
+    //         throws StorageException, ProcessingException {
+    //     DirectoryReference currentDir = user.getStorageDirectory();
+    //     String[] parts = PathUtil.standardizeRelativePathString(targetDirPath).split("/");
+    //     for (int i = 1; i < parts.length; i++) {
+    //         currentDir = currentDir.getDirectoryRefs().get(parts[i]);
+    //         if (currentDir == null) {
+    //             throw new StorageException("A directory with this name does not exists: " + parts[i]);
+    //         }
+    //     }
+    //     return Optional.ofNullable(hydrateChunkRefsFromDir(currentDir));
+    // }
 
-    /**
-     * Returns HydratedDirectoryReference of a directory for a given DirectoryReference: a DirectoryReference with
-     * complete Chunk data (hydratedChunkRefs) instead of Chunk references.
-     * 
-     * @param dirRef The directory to hydrate.
-     * @return The HydratedDirectoryReference of the directory.
-     */
-    @Transactional
-    public Optional<HydratedDirectoryReference> getHydratedDirectoryDataFromDirRef(DirectoryReference dirRef) {
-        return Optional.ofNullable(hydrateChunkRefsFromDir(dirRef));
-    }
+    // /**
+    //  * Returns HydratedDirectoryReference of a directory for a given DirectoryReference: a DirectoryReference with
+    //  * complete Chunk data (hydratedChunkRefs) instead of Chunk references.
+    //  * 
+    //  * @param dirRef The directory to hydrate.
+    //  * @return The HydratedDirectoryReference of the directory.
+    //  */
+    // @Transactional
+    // public Optional<HydratedDirectoryReference> getHydratedDirectoryDataFromDirRef(DirectoryReference dirRef) {
+    //     return Optional.ofNullable(hydrateChunkRefsFromDir(dirRef));
+    // }
 
-    @Transactional
-    private HydratedDirectoryReference hydrateChunkRefsFromDir(DirectoryReference dir) {
-        HydratedDirectoryReference hydratedDirRef = new HydratedDirectoryReference(dir.getName(),
-                dir.getDirectoryRefs());
-        HashMap<String, Integer> chunkRefs = dir.getChunkRefs();
-        chunkRefs.entrySet().forEach(entry -> {
-            Integer fileId = entry.getValue();
-            Chunk c = chunkService.findById(fileId);
-            ChunkReference newChunkRef = new ChunkReference(c);
-            hydratedDirRef.addHydratedChunkRef(newChunkRef);
-        });
-        return hydratedDirRef;
-    }
+    // @Transactional
+    // private HydratedDirectoryReference hydrateChunkRefsFromDir(DirectoryReference dir) {
+    //     HydratedDirectoryReference hydratedDirRef = new HydratedDirectoryReference(dir.getName(),
+    //             dir.getDirectoryRefs());
+    //     HashMap<String, Integer> chunkRefs = dir.getChunkRefs();
+    //     chunkRefs.entrySet().forEach(entry -> {
+    //         Integer fileId = entry.getValue();
+    //         Chunk c = chunkService.findById(fileId);
+    //         ChunkReference newChunkRef = new ChunkReference(c);
+    //         hydratedDirRef.addHydratedChunkRef(newChunkRef);
+    //     });
+    //     return hydratedDirRef;
+    // }
 
     // /**
     //  * Changes the name of the Chunk and the name of its reference in the user
