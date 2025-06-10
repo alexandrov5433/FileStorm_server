@@ -3,6 +3,7 @@ package server.filestorm.model.entity;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import jakarta.annotation.Nonnull;
 import jakarta.persistence.CascadeType;
@@ -36,7 +37,7 @@ public class Directory {
     private String name;
 
     @Column(name = "elements_count", nullable = false)
-    private Number elementsCount = 0;
+    private Integer elementsCount = 0;
 
     @OneToMany(mappedBy = "directory", cascade = CascadeType.ALL, orphanRemoval = false)
     private List<Chunk> chunks = new ArrayList<Chunk>();
@@ -99,7 +100,7 @@ public class Directory {
         this.name = name;
     }
 
-    public Number getElementsCount() {
+    public Integer getElementsCount() {
         return elementsCount;
     }
 
@@ -115,8 +116,8 @@ public class Directory {
         return this.chunks.remove(chunk);
     }
 
-    public Directory getParentDirectory() {
-        return parentDirectory;
+    public Optional<Directory> getParentDirectory() {
+        return Optional.ofNullable(parentDirectory);
     }
 
     public void setParentDirectory(Directory parentDirectory) {
@@ -147,6 +148,10 @@ public class Directory {
             directory.setParentDirectory(null);
         }
         return isRemoved;
+    }
+
+    public Long getCreatedOn() {
+        return createdOn;
     }
 
     public Long getLastModified() {
