@@ -1,5 +1,6 @@
 package server.filestorm.model.entity;
 
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -16,6 +17,7 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 @Entity
@@ -23,7 +25,7 @@ import jakarta.persistence.Table;
 public class Chunk {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+    private Long id;
 
     @ManyToOne
     @JoinColumn(name = "FK_user_id")
@@ -33,60 +35,66 @@ public class Chunk {
     @Column(nullable = false, length = 2500)
     private String name;
 
-    @Column(nullable = false, length = 2500)
-    private String absolute_file_path;
+    @Column(name = "absolute_file_path", nullable = false, length = 2500)
+    private String absoluteFilePath;
 
-    @Column(nullable = false, length = 2500)
-    private String relative_file_path;
+    @Column(name = "created_on", nullable = false, updatable = false)
+    private Long createdOn = new Date().getTime();
 
-    @Column(nullable = false, updatable = false)
-    private Long created_on;
+    @Column(name = "last_modified", nullable = false)
+    private Long lastModified = new Date().getTime();
 
-    @Nonnull
-    private Long size_bytes;
+    @Column(name = "size_bytes", nullable = false)
+    private Long sizeBytes;
 
-    @Nonnull
-    private String mime_type;
+    @Column(name = "mime_type", nullable = false)
+    private String mimeType;
 
-    @Nonnull
+    @Column(name = "share_option", nullable = false)
     @Enumerated(EnumType.STRING)
-    private ShareOption share_option = ShareOption.PRIVATE;
+    private ShareOption shareOption = ShareOption.PRIVATE;
 
     public enum ShareOption {
         PRIVATE, SHARE_WITH_ALL_WITH_LINK, SHARE_WITH_USER
     }
-    
+
     @ManyToMany
-    @JoinTable(
-        name = "chunk_shared_with",
-        joinColumns = @JoinColumn(name = "chunk_id"),
-        inverseJoinColumns = @JoinColumn(name = "user_id")
-    )
-    private Set<User> share_with = new HashSet<>();
+    @JoinTable(name = "chunk_shared_with", joinColumns = @JoinColumn(name = "chunk_id"), inverseJoinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "share_with", nullable = false)
+    private Set<User> shareWith = new HashSet<>();
 
-    @Column(nullable = true, length = 2500)
-    private String share_link;
+    @Column(name = "share_link", nullable = true, length = 2500)
+    private String shareLink;
 
-    @Column(nullable = false)
-    private Boolean is_favorite = false;
+    @Column(name = "is_favorite", nullable = false)
+    private Boolean isFavorite = false;
 
+    @ManyToOne
+    @JoinColumn(name = "directory_id")
+    private Directory directory;
 
     @PrePersist
-    private void onCreate() {
-        this.created_on = System.currentTimeMillis();
-        if (this.share_option == null) {
-            this.share_option = ShareOption.PRIVATE;
+    private void prePersist() {
+        if (this.createdOn == null) {
+            this.createdOn = new Date().getTime();
         }
-        if (this.share_with == null) {
-            this.share_with = new HashSet<>();
+        if (this.shareOption == null) {
+            this.shareOption = ShareOption.PRIVATE;
         }
-        if (this.is_favorite == null) {
-            this.is_favorite = false;
+        if (this.shareWith == null) {
+            this.shareWith = new HashSet<>();
+        }
+        if (this.isFavorite == null) {
+            this.isFavorite = false;
         }
     }
 
+    @PreUpdate
+    private void preUpdate() {
+        this.lastModified = new Date().getTime();
+    }
 
-    public Integer getId() {
+    public Long getId() {
         return this.id;
     }
 
@@ -107,75 +115,75 @@ public class Chunk {
     }
 
     public String getAbsoluteFilePath() {
-        return this.absolute_file_path;
+        return absoluteFilePath;
     }
 
-    public void setAbsoluteFilePath(String absolute_file_path) {
-        this.absolute_file_path = absolute_file_path;
-    }
-
-    public String getRelativeFilePath() {
-        return relative_file_path;
-    }
-
-    public void setRelativeFilePath(String relative_file_path) {
-        this.relative_file_path = relative_file_path;
+    public void setAbsoluteFilePath(String absoluteFilePath) {
+        this.absoluteFilePath = absoluteFilePath;
     }
 
     public Long getCreatedOn() {
-        return this.created_on;
+        return createdOn;
     }
 
     public Long getSizeBytes() {
-        return size_bytes;
+        return sizeBytes;
     }
 
-    public void setSizeBytes(Long size_bytes) {
-        this.size_bytes = size_bytes;
+    public void setSizeBytes(Long sizeBytes) {
+        this.sizeBytes = sizeBytes;
     }
 
     public String getMimeType() {
-        return this.mime_type;
+        return mimeType;
     }
 
-    public void setMimeType(String mime_type) {
-        this.mime_type = mime_type;
+    public void setMimeType(String mimeType) {
+        this.mimeType = mimeType;
     }
 
     public ShareOption getShareOption() {
-        return this.share_option;
+        return shareOption;
     }
 
-    public void setShareOption(ShareOption share_option) {
-        this.share_option = share_option;
+    public void setShareOption(ShareOption shareOption) {
+        this.shareOption = shareOption;
     }
 
     public String getShareLink() {
-        return this.share_link;
+        return shareLink;
     }
 
-    public void setShareLink(String share_link) {
-        this.share_link = share_link;
+    public void setShareLink(String shareLink) {
+        this.shareLink = shareLink;
     }
 
     public Set<User> getShareWith() {
-        return share_with;
+        return shareWith;
     }
 
-    public void setShareWith(Set<User> share_with) {
-        this.share_with = share_with;
+    public void setShareWith(Set<User> shareWith) {
+        this.shareWith = shareWith;
     }
 
     public void addUserToShareWithList(User u) {
-        this.share_with.add(u);
+        this.shareWith.add(u);
     }
 
     public Boolean getIsFavorite() {
-        return is_favorite;
+        return isFavorite;
     }
 
-    public void setIsFavorite(Boolean is_favorite) {
-        this.is_favorite = is_favorite;
+    public void setIsFavorite(Boolean isFavorite) {
+        this.isFavorite = isFavorite;
+    }
+
+    public Directory getDirectory() {
+        return directory;
+    }
+
+    public void setDirectory(Directory directory) {
+        this.directory = directory;
     }
 
 }
