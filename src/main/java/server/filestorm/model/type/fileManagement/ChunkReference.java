@@ -1,115 +1,153 @@
 package server.filestorm.model.type.fileManagement;
 
 import java.io.Serializable;
+import java.util.stream.Collectors;
 
 import server.filestorm.model.entity.Chunk;
+import server.filestorm.model.entity.User;
 import server.filestorm.model.entity.Chunk.ShareOption;
 
-public class ChunkReference implements Serializable{
-    
-    private Integer id;
-    private Integer owner;
-    private String name;
-    private String relative_file_path;
-    private Long created_on;
-    private Long size_bytes;
-    private String mime_type;
-    private ShareOption share_option;
-    private String share_link;
-    private Boolean is_favorite;
+public class ChunkReference implements Serializable {
 
-    public ChunkReference() {};
+    private Long id;
+    private Long ownerId;
+    private String originalFileName;
+    private Long createdOn;
+    private Long lastModified;
+    private Long sizeBytes;
+    private String mimeType;
+    private ShareOption shareOption;
+    private Long[] shareWith;
+    private String shareLink;
+    private Boolean isFavorite;
+    private Long directory;
+
+    public ChunkReference() {
+        this.id = null;
+        this.ownerId = null;
+        this.originalFileName = null;
+        this.createdOn = null;
+        this.lastModified = null;
+        this.sizeBytes = null;
+        this.mimeType = null;
+        this.shareOption = null;
+        this.shareWith = new Long[0];
+        this.shareLink = null;
+        this.isFavorite = null;
+        this.directory = null;
+    };
 
     public ChunkReference(Chunk chunk) {
         this.id = chunk.getId();
-        this.owner = chunk.getOwner().getId();
-        this.name = chunk.getName();
-        this.relative_file_path = chunk.getRelativeFilePath();
-        this.created_on = chunk.getCreatedOn();
-        this.size_bytes = chunk.getSizeBytes();
-        this.mime_type = chunk.getMimeType();
-        this.share_option = chunk.getShareOption();
-        this.share_link = chunk.getShareLink();
-        this.is_favorite = chunk.getIsFavorite();
+        this.ownerId = chunk.getOwner().getId();
+        this.originalFileName = chunk.getOriginalFileName();
+        this.createdOn = chunk.getCreatedOn();
+        this.lastModified = chunk.getLastModified();
+        this.sizeBytes = chunk.getSizeBytes();
+        this.mimeType = chunk.getMimeType();
+        this.shareOption = chunk.getShareOption();
+        this.shareWith = chunk.getShareWith().stream()
+            .map(User::getId)
+            .collect(Collectors.toList())
+            .toArray(new Long[0]);
+        this.shareLink = chunk.getShareLink();
+        this.isFavorite = chunk.getIsFavorite();
+        this.directory = chunk.getDirectory().getId();
     };
 
-    public Integer getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
-    public Integer getOwner() {
-        return owner;
+    public Long getOwnerId() {
+        return ownerId;
     }
 
-    public void setOwner(Integer owner) {
-        this.owner = owner;
+    public void setOwnerId(Long ownerId) {
+        this.ownerId = ownerId;
     }
 
-    public String getName() {
-        return name;
+    public String getOriginalFileName() {
+        return originalFileName;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setOriginalFileName(String originalFileName) {
+        this.originalFileName = originalFileName;
     }
 
-    public String getRelativeRilePath() {
-        return relative_file_path;
+    public Long getCreatedOn() {
+        return createdOn;
     }
 
-    public void setRelativeRilePath(String relative_file_path) {
-        this.relative_file_path = relative_file_path;
+    public void setCreatedOn(Long createdOn) {
+        this.createdOn = createdOn;
     }
 
-    public Long getCreated_on() {
-        return created_on;
+    public Long getLastModified() {
+        return lastModified;
     }
 
-    public void setCreated_on(Long created_on) {
-        this.created_on = created_on;
+    public void setLastModified(Long lastModified) {
+        this.lastModified = lastModified;
     }
 
-    public Long getSize_bytes() {
-        return size_bytes;
+    public Long getSizeBytes() {
+        return sizeBytes;
     }
 
-    public void setSize_bytes(Long size_bytes) {
-        this.size_bytes = size_bytes;
+    public void setSizeBytes(Long sizeBytes) {
+        this.sizeBytes = sizeBytes;
     }
 
-    public String getMime_type() {
-        return mime_type;
+    public String getMimeType() {
+        return mimeType;
     }
 
-    public void setMime_type(String mime_type) {
-        this.mime_type = mime_type;
+    public void setMimeType(String mimeType) {
+        this.mimeType = mimeType;
     }
 
-    public ShareOption getShare_option() {
-        return share_option;
+    public ShareOption getShareOption() {
+        return shareOption;
     }
 
-    public void setShare_option(ShareOption share_option) {
-        this.share_option = share_option;
+    public void setShareOption(ShareOption shareOption) {
+        this.shareOption = shareOption;
     }
 
-    public String getShare_link() {
-        return share_link;
+    public Long[] getShareWith() {
+        return shareWith;
+    }
+    
+    public void setShareWith(Long[] shareWith) {
+        this.shareWith = shareWith;
     }
 
-    public void setShare_link(String share_link) {
-        this.share_link = share_link;
+    public String getShareLink() {
+        return shareLink;
     }
 
-    public Boolean getIs_favorite() {
-        return is_favorite;
+    public void setShareLink(String shareLink) {
+        this.shareLink = shareLink;
     }
 
-    public void setIs_favorite(Boolean is_favorite) {
-        this.is_favorite = is_favorite;
+    public Boolean getIsFavorite() {
+        return isFavorite;
+    }
+
+    public void setIsFavorite(Boolean isFavorite) {
+        this.isFavorite = isFavorite;
+    }
+
+    public Long getDirectory() {
+        return directory;
+    }
+
+    public void setDirectory(Long directory) {
+        this.directory = directory;
     }
 }
