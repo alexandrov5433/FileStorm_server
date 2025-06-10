@@ -49,12 +49,12 @@ public class FileSystem {
 
     @GetMapping("/api/file")
     public DeferredResult<ResponseEntity<?>> downloadFile(
-            @RequestParam Integer fileId,
+            @RequestParam Long fileId,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<?>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
 
-        Integer userId = session.getUserId();
+        Long userId = session.getUserId();
         User user = userService.findById(userId);
         Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
 
@@ -86,7 +86,7 @@ public class FileSystem {
             throw new FileManagementException("Not enough free storage space for this file.");
         }
 
-        // save file is FS
+        // save file is FS and DB
         Chunk chunk = fileSystemService.store(fileUploadData, user, directory);
 
         ChunkReference chunkRef = new ChunkReference(chunk);
