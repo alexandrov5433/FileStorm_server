@@ -127,15 +127,15 @@ public class FileSystem {
         return res;
     }
 
-    @PatchMapping("/api/file/name/{fileId}")
+    @PatchMapping("/api/file/{fileId}")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> changeFileName(
-            @PathVariable Integer fileId,
+            @PathVariable Long fileId,
             @RequestParam String newFileName,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
 
-        Integer userId = session.getUserId();
+        Long userId = session.getUserId();
         User user = userService.findById(userId);
 
         // check file existance and ownership
@@ -147,18 +147,16 @@ public class FileSystem {
         // sanitize and check newFileName
         newFileName = PathUtil.sanitizeFileName(newFileName);
 
-        // change file name in FS
-        fileSystemService.changeFileName(chunk.getRelativeFilePath(), chunk.getName(), newFileName);
+        chunk = chunkService.updateOriginalFileName(chunk, newFileName);
 
-        // chage chunk name and chunkRef name in DB
-        ChunkReference chunkRef = userService.changeChunkRefName(chunk, user, newFileName);
-        if (chunkRef == null) {
+        // chage chunk name in DB
+        if (chunk == null) {
             throw new FileManagementException("Could not change the name.");
         }
 
         // return ChunkReference
         res.setResult(ResponseEntity.ok()
-                .body(new ApiResponse<ChunkReference>("Name changed.", chunkRef)));
+                .body(new ApiResponse<ChunkReference>("Name changed.", new ChunkReference(chunk))));
         return res;
     }
 
@@ -179,7 +177,8 @@ public class FileSystem {
         userService.verifyDirectoryExistance(user, targetDirectoryPath);
 
         // return directory data
-        HydratedDirectoryReference hydratedDirRef = userService.getHydratedDirectoryDataForUser(user, targetDirectoryPath)
+        HydratedDirectoryReference hydratedDirRef = userService
+                .getHydratedDirectoryDataForUser(user, targetDirectoryPath)
                 .orElseThrow(() -> new FileManagementException("Could not get directory's data."));
 
         res.setResult(ResponseEntity.ok()

@@ -36,9 +36,15 @@ public class ChunkService {
      *                                 the given owner does not match the owner
      *                                 reference in the found Chunk.
      */
-    public Chunk findChunkByIdAndOwner(Long chunk_id, User owner) throws FileManagementException {
-        return chunkRepository.findChunkByIdAndOwner(chunk_id, owner)
+    public Chunk findChunkByIdAndOwner(Long chunkId, User owner) throws FileManagementException {
+        return chunkRepository.findChunkByIdAndOwner(chunkId, owner)
                 .orElseThrow(() -> new FileManagementException("A file with this ID was not found for this user."));
+    }
+
+    @Transactional
+    public Chunk updateOriginalFileName(Chunk chunk, String newName) {
+        chunk.setOriginalFileName(newName);
+        return chunkRepository.save(chunk);
     }
 
     // public Chunk findChunkByNameAndOwner(String name, User owner) {
