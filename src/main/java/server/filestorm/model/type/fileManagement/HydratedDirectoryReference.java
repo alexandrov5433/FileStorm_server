@@ -1,42 +1,65 @@
 package server.filestorm.model.type.fileManagement;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map.Entry;
+import java.util.stream.Collectors;
+
+import server.filestorm.model.entity.Directory;
 
 public class HydratedDirectoryReference implements Serializable {
+    private Long id;
+    private Long ownerId;
     private String name;
-    private ArrayList<ChunkReference> hydratedChunkRefs; // Map<NameOfChunk, ChunkReference>
-    private HashMap<String, Integer> simpleDirectoryRefs; // Map<NameOfDirectory, ref>
+    private Integer elementsCount;
+    private ChunkReference[] hydratedChunks;
+    private DirectoryReference[] subdirectories;
+    private Long parentDirectoryId;
+    private Long createdOn;
+    private Long lastModified;
 
     public HydratedDirectoryReference() {
+        this.id = null;
+        this.ownerId = null;
         this.name = null;
-        this.hydratedChunkRefs = new ArrayList<ChunkReference>();
-        this.simpleDirectoryRefs = new HashMap<String, Integer>();
-    }
-    
-    public HydratedDirectoryReference(String name) {
-        this.name = name;
-        this.hydratedChunkRefs = new ArrayList<ChunkReference>();
-        this.simpleDirectoryRefs = new HashMap<String, Integer>();
+        this.elementsCount = null;
+        this.hydratedChunks = new ChunkReference[0];
+        this.subdirectories = new DirectoryReference[0];
+        this.parentDirectoryId = null;
+        this.createdOn = null;
+        this.lastModified = null;
     }
 
-    public HydratedDirectoryReference(String name, HashMap<String, DirectoryReference> directoryRefs) {
-        this.name = name;
-        this.hydratedChunkRefs = new ArrayList<ChunkReference>();
+    public HydratedDirectoryReference(Directory dir) {
+        this.id = dir.getId();
+        this.ownerId = dir.getOwner().getId();
+        this.name = dir.getName();
+        this.elementsCount = dir.getElementsCount();
+        this.hydratedChunks = dir.getChunks().stream()
+            .map(ChunkReference::new)
+            .collect(Collectors.toList())
+            .toArray(new ChunkReference[0]);
+        this.subdirectories = dir.getSubdirectories().stream()
+            .map(DirectoryReference::new)
+            .collect(Collectors.toList())
+            .toArray(new DirectoryReference[0]);
+        this.parentDirectoryId = dir.getParentDirectory().isPresent() ? dir.getParentDirectory().get().getId() : null;
+        this.createdOn = dir.getCreatedOn();
+        this.lastModified = dir.getLastModified();
+    }
 
-        HashMap<String, Integer> simpleDirRef = new HashMap<String, Integer>();
-        Iterator<Entry<String, DirectoryReference>> itr = directoryRefs.entrySet().iterator();
-        while (itr.hasNext()) {
-            Entry<String, DirectoryReference> entry = itr.next();
-            String dirName = entry.getKey();
-            DirectoryReference dirRef = entry.getValue();
+    public Long getId() {
+        return id;
+    }
 
-            simpleDirRef.put(dirName, dirRef.getContentSize());
-        }
-        this.simpleDirectoryRefs = simpleDirRef;
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Long getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(Long ownerId) {
+        this.ownerId = ownerId;
     }
 
     public String getName() {
@@ -47,23 +70,51 @@ public class HydratedDirectoryReference implements Serializable {
         this.name = name;
     }
 
-    public ArrayList<ChunkReference> getHydratedChunkRefs() {
-        return this.hydratedChunkRefs;
+    public Integer getElementsCount() {
+        return elementsCount;
     }
 
-    public void setHydratedChunkRefs(ArrayList<ChunkReference> hydratedChunkRefs) {
-        this.hydratedChunkRefs = hydratedChunkRefs;
+    public void setElementsCount(Integer elementsCount) {
+        this.elementsCount = elementsCount;
     }
 
-    public HashMap<String, Integer> getSimpleDirectoryRefs() {
-        return this.simpleDirectoryRefs;
+    public ChunkReference[] getHydratedChunks() {
+        return hydratedChunks;
     }
 
-    public void setSimpleDirectoryRefs(HashMap<String, Integer> directoryRefs) {
-        this.simpleDirectoryRefs = directoryRefs;
+    public void setHydratedChunks(ChunkReference[] hydratedChunks) {
+        this.hydratedChunks = hydratedChunks;
     }
 
-    public void addHydratedChunkRef(ChunkReference chunkRef) {
-        this.hydratedChunkRefs.add(chunkRef);
+    public DirectoryReference[] getSubdirectories() {
+        return subdirectories;
+    }
+
+    public void setSubdirectories(DirectoryReference[] subdirectories) {
+        this.subdirectories = subdirectories;
+    }
+
+    public Long getParentDirectoryId() {
+        return parentDirectoryId;
+    }
+
+    public void setParentDirectoryId(Long parentDirectoryId) {
+        this.parentDirectoryId = parentDirectoryId;
+    }
+
+    public Long getCreatedOn() {
+        return createdOn;
+    }
+
+    public void setCreatedOn(Long createdOn) {
+        this.createdOn = createdOn;
+    }
+
+    public Long getLastModified() {
+        return lastModified;
+    }
+
+    public void setLastModified(Long lastModified) {
+        this.lastModified = lastModified;
     }
 }
