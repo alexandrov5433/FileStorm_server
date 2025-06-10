@@ -140,6 +140,10 @@ public class Chunk {
         return createdOn;
     }
 
+    public Long getLastModified() {
+        return lastModified;
+    }
+    
     public Long getSizeBytes() {
         return sizeBytes;
     }
