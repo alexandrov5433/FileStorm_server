@@ -160,9 +160,9 @@ public class FileSystem {
         return res;
     }
 
-    @GetMapping("/api/directory")
+    @GetMapping("/api/directory/{directoryId}")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> getDirectoryData(
-            @RequestParam String targetDirectoryPath,
+            @PathVariable Long directoryId,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
@@ -170,19 +170,14 @@ public class FileSystem {
         Long userId = session.getUserId();
         User user = userService.findById(userId);
 
-        // check target dir starts with root user storage dir
-        PathUtil.verifyRelativePath(targetDirectoryPath, userId);
-
-        // check directory existance
-        userService.verifyDirectoryExistance(user, targetDirectoryPath);
+        // check target dir (sub dir)
+        Directory directory = directoryService.findDirectoryForUserById(directoryId, user);
 
         // return directory data
-        HydratedDirectoryReference hydratedDirRef = userService
-                .getHydratedDirectoryDataForUser(user, targetDirectoryPath)
-                .orElseThrow(() -> new FileManagementException("Could not get directory's data."));
+        HydratedDirectoryReference hydratedDirectory = new HydratedDirectoryReference(directory);
 
         res.setResult(ResponseEntity.ok()
-                .body(new ApiResponse<HydratedDirectoryReference>("Serving directory data.", hydratedDirRef)));
+                .body(new ApiResponse<HydratedDirectoryReference>("Serving directory data.", hydratedDirectory)));
         return res;
     }
 
