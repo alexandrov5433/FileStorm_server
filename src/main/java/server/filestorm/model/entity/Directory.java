@@ -4,8 +4,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import org.hibernate.Length;
-
 import jakarta.annotation.Nonnull;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -99,14 +97,6 @@ public class Directory {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public String getAbsoluteFilePath() {
-        return absoluteFilePath;
-    }
-
-    public void setAbsoluteFilePath(String absoluteFilePath) {
-        this.absoluteFilePath = absoluteFilePath;
     }
 
     public Number getElementsCount() {
