@@ -37,10 +37,6 @@ public class Directory {
     @Column(name = "name", nullable = false, length = 400)
     private String name;
 
-    @Column(name = "absolute_file_path", nullable = false, length = Length.LONG32)
-    // 32-bit (2147483647) string == TEXT type in PostgreSQL
-    private String absoluteFilePath;
-
     @Column(name = "elements_count", nullable = false)
     private Number elementsCount = 0;
 

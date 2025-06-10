@@ -75,10 +75,7 @@ public class Authentication {
             }
 
             // add user storage dir to his DB reference
-            directoryService.createNewDirectory(
-                    rootUserDir.getName(),
-                    rootUserDir.getAbsolutePath(),
-                    user);
+            directoryService.createNewDirectory(rootUserDir.getName(), user);
 
             // responde 200 with cookie
             res.setResult(ResponseEntity.ok()
