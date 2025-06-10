@@ -93,7 +93,7 @@ public class AuthService {
         return new AuthResult<User>(false, user);
     }
 
-    public User validateSessionData(Integer id, String username) {
+    public User validateSessionData(Long id, String username) {
         User user = userService.findUserByUsernameAndId(username, id);
         if (user == null) {
             return null;

@@ -1,5 +1,6 @@
 package server.filestorm.controller;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -14,11 +15,10 @@ import server.filestorm.model.type.authentication.AuthValidationResult;
 import server.filestorm.model.type.authentication.LoginData;
 import server.filestorm.model.type.authentication.RegistrationData;
 import server.filestorm.model.type.authentication.UserReference;
-import server.filestorm.model.type.fileManagement.DirectoryReference;
 import server.filestorm.model.entity.User;
 import server.filestorm.service.AuthService;
+import server.filestorm.service.DirectoryService;
 import server.filestorm.service.FileSystemService;
-import server.filestorm.service.UserService;
 import server.filestorm.util.CustomHttpServletRequestWrapper;
 import server.filestorm.util.JwtUtil;
 
@@ -39,7 +39,7 @@ public class Authentication {
     private FileSystemService fileService;
 
     @Autowired
-    private UserService userService;
+    private DirectoryService directoryService;
 
     @PostMapping(path = "/api/auth/register")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> register(RegistrationData data) {
@@ -65,8 +65,8 @@ public class Authentication {
                             token); // 31556952s=1y
 
             // create user specific storage directory
-            DirectoryReference rootUserDir = fileService
-                    .createRootDirectoryForUser(Integer.toString(user.getId()));
+            File rootUserDir = fileService
+                    .createRootDirectoryForUser(Long.toString(user.getId()));
             if (rootUserDir == null) {
                 res.setResult(ResponseEntity.status(500)
                         .body(new ApiResponse<>(
@@ -75,12 +75,16 @@ public class Authentication {
             }
 
             // add user storage dir to his DB reference
-            userService.addRootDirectory(user, rootUserDir);
+            directoryService.createNewDirectory(
+                    rootUserDir.getName(),
+                    rootUserDir.getAbsolutePath(),
+                    user);
 
             // responde 200 with cookie
             res.setResult(ResponseEntity.ok()
                     .header("Set-Cookie", setCookieHeaderValue)
-                    .body(new ApiResponse<UserReference>("Registration successful.", new UserReference(user))));
+                    .body(new ApiResponse<UserReference>("Registration successful.",
+                            new UserReference(user))));
         }
         return res;
     }
@@ -109,7 +113,8 @@ public class Authentication {
 
             res.setResult(ResponseEntity.ok()
                     .header("Set-Cookie", setCookieHeaderValue)
-                    .body(new ApiResponse<UserReference>("Login successful.", new UserReference(user))));
+                    .body(new ApiResponse<UserReference>("Login successful.",
+                            new UserReference(user))));
         }
         return res;
     }
@@ -145,7 +150,7 @@ public class Authentication {
                             .body(new ApiResponse<>("No session.")));
         } else {
             Map<String, Object> claims = session.getClaims();
-            Integer id = (Integer) claims.get("id");
+            Long id = (Long) claims.get("id");
             String username = (String) claims.get("username");
             if (id == null || username == null) {
                 res.setResult(
