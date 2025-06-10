@@ -10,17 +10,17 @@ import org.springframework.data.jpa.repository.Query;
 import server.filestorm.model.entity.Chunk;
 import server.filestorm.model.entity.User;
 
-public interface ChunkRepository extends JpaRepository<Chunk, Integer>{
+public interface ChunkRepository extends JpaRepository<Chunk, Long>{
     
     @Query("SELECT c FROM Chunk c WHERE c.id = ?1 AND c.owner = ?2")
-    Optional<Chunk> findChunkByIdAndOwner(Integer id, User owner);
+    Optional<Chunk> findChunkByIdAndOwner(Long id, User owner);
 
     // @Query("SELECT c FROM Chunk c WHERE c.name = ?1 AND c.owner = ?2")
     // Optional<Chunk> findChunkByNameAndOwner(String name, User owner);
 
     @Modifying
     @Query("DELETE FROM Chunk c WHERE c.id = ?1 AND c.owner = ?2")
-    Integer deleteChunkByIdAndOwner(Integer chunk_id, User owner);
+    Integer deleteChunkByIdAndOwner(Long chunk_id, User owner);
 
     @Query("SELECT c FROM Chunk c WHERE c.owner = ?1 AND c.share_option != 'PRIVATE'")
     Optional<List<Chunk>> getFilesUserIsSharing(User owner);
