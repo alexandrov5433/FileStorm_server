@@ -1,26 +1,67 @@
 package server.filestorm.model.type.fileManagement;
 
 import java.io.Serializable;
-import java.util.HashMap;
+import java.util.stream.Collectors;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import server.filestorm.model.entity.Chunk;
+import server.filestorm.model.entity.Directory;
 
 public class DirectoryReference implements Serializable {
 
+    private Long id;
+    private Long ownerId;
     private String name;
-    private HashMap<String, Integer> chunkRefs; // Map<NameOfChunk, idOfChunk>
-    private HashMap<String, DirectoryReference> directoryRefs; // Map<NameOfDirectory, ref>
+    private Integer elementsCount;
+    private Long[] chunks;
+    private Long[] subdirectories;
+    private Long parentDirectoryId;
+    private Long createdOn;
+    private Long lastModified;
 
     public DirectoryReference() {
+        this.id = null;
+        this.ownerId = null;
         this.name = null;
-        this.chunkRefs = new HashMap<String, Integer>();
-        this.directoryRefs = new HashMap<String, DirectoryReference>();
+        this.elementsCount = null;
+        this.chunks = new Long[0];
+        this.subdirectories = new Long[0];
+        this.parentDirectoryId = null;
+        this.createdOn = null;
+        this.lastModified = null;
     }
 
-    public DirectoryReference(String name) {
-        this.name = name;
-        this.chunkRefs = new HashMap<String, Integer>();
-        this.directoryRefs = new HashMap<String, DirectoryReference>();
+    public DirectoryReference(Directory dir) {
+        this.id = dir.getId();
+        this.ownerId = dir.getOwner().getId();
+        this.name = dir.getName();
+        this.elementsCount = dir.getElementsCount();
+        this.chunks = dir.getChunks().stream()
+                .map(Chunk::getId)
+                .collect(Collectors.toList())
+                .toArray(new Long[0]);
+        this.subdirectories = dir.getSubdirectories().stream()
+                .map(Directory::getId)
+                .collect(Collectors.toList())
+                .toArray(new Long[0]);
+        this.parentDirectoryId = dir.getParentDirectory().isPresent() ? dir.getParentDirectory().get().getId() : null;
+        this.createdOn = dir.getCreatedOn();
+        this.lastModified = dir.getLastModified();
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Long getOwnerId() {
+        return ownerId;
+    }
+
+    public void setOwnerId(Long ownerId) {
+        this.ownerId = ownerId;
     }
 
     public String getName() {
@@ -31,34 +72,51 @@ public class DirectoryReference implements Serializable {
         this.name = name;
     }
 
-    public HashMap<String, Integer> getChunkRefs() {
-        return this.chunkRefs;
+    public Integer getElementsCount() {
+        return elementsCount;
     }
 
-    public void setChunkRefs(HashMap<String, Integer> chunkRefs) {
-        this.chunkRefs = chunkRefs;
+    public void setElementsCount(Integer elementsCount) {
+        this.elementsCount = elementsCount;
     }
 
-    public HashMap<String, DirectoryReference> getDirectoryRefs() {
-        return this.directoryRefs;
+    public Long[] getChunks() {
+        return chunks;
     }
 
-    public void setDirectoryRefs(HashMap<String, DirectoryReference> directoryRefs) {
-        this.directoryRefs = directoryRefs;
+    public void setChunks(Long[] chunks) {
+        this.chunks = chunks;
     }
 
-    public void addChunkRef(String chunkName, Integer chunkId) {
-        this.chunkRefs.put(chunkName, chunkId);
+    public Long[] getSubdirectories() {
+        return subdirectories;
     }
 
-    public Boolean removeChunkRef(String chunkName, Integer chunkId) {
-        return this.chunkRefs.remove(chunkName, chunkId);
+    public void setSubdirectories(Long[] subdirectories) {
+        this.subdirectories = subdirectories;
     }
 
-    @JsonIgnore
-    public int getContentSize() {
-        int chunksCount = this.chunkRefs == null ? 0 : this.chunkRefs.size();
-        int directoriesCount = this.directoryRefs == null ? 0 : this.directoryRefs.size();
-        return chunksCount + directoriesCount;
+    public Long getParentDirectoryId() {
+        return parentDirectoryId;
+    }
+
+    public void setParentDirectoryId(Long parentDirectoryId) {
+        this.parentDirectoryId = parentDirectoryId;
+    }
+
+    public Long getCreatedOn() {
+        return createdOn;
+    }
+
+    public void setCreatedOn(Long createdOn) {
+        this.createdOn = createdOn;
+    }
+
+    public Long getLastModified() {
+        return lastModified;
+    }
+
+    public void setLastModified(Long lastModified) {
+        this.lastModified = lastModified;
     }
 }
