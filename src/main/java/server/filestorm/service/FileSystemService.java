@@ -315,25 +315,25 @@ public class FileSystemService {
     // }
 
     /**
-     * Deletes the File on the given path.
+     * Deletes the file referenced in the chunk.
      * 
-     * @param targetFilePath The path of the file, which is to be deleted.
+     * @param chunk The chunk referencing the file, which is to be deleted.
      * @return true if the file was deleted successfully, false otherwise.
      * @throws FileManagementException When the path is not valid or an unexpected
      *                                 exeption occurs.
      */
-    public Boolean deleteUserFile(String targetDirPath, String targetFileName)
+    public Boolean deleteFile(Chunk chunk)
             throws FileManagementException, ProcessingException {
         try {
-            String fullPathString = PathUtil.concatNameAtEndOfPath(targetDirPath, targetFileName);
-            boolean isValid = verifyExistance(fullPathString);
+            Path absolutePath = getAbsolutePath(chunk);
+            boolean isValid = verifyExistance(absolutePath);
             if (!isValid) {
-                throw new FileManagementException("Directory path is invalid: " + targetDirPath);
+                throw new FileManagementException("Directory path is invalid: " + absolutePath.toString());
             }
-            File targetDir = this.getAbsolutePath(fullPathString).toFile();
-            return this.deleteFile(targetDir);
+            File targetFile = absolutePath.toFile();
+            return targetFile.delete();
         } catch (Exception e) {
-            throw new FileManagementException("A problem occured while deleting: " + targetDirPath);
+            throw new FileManagementException("A problem occured while deleting: " + chunk.getName());
         }
     }
 
@@ -346,19 +346,19 @@ public class FileSystemService {
      *                                 returns false or when an unexpected Exception
      *                                 occurs.
      */
-    public Boolean deleteUserDirectory(String targetDirectoryPath)
-            throws FileManagementException {
-        try {
-            boolean isValid = verifyExistance(targetDirectoryPath);
-            if (!isValid) {
-                throw new FileManagementException("Directory path is invalid: " + targetDirectoryPath);
-            }
-            File targetDir = this.getAbsolutePath(targetDirectoryPath).toFile();
-            return this.deleteFile(targetDir);
-        } catch (Exception e) {
-            throw new FileManagementException("A problem occured while deleting: " + targetDirectoryPath);
-        }
-    }
+    // public Boolean deleteUserDirectory(String targetDirectoryPath)
+    //         throws FileManagementException {
+    //     try {
+    //         boolean isValid = verifyExistance(targetDirectoryPath);
+    //         if (!isValid) {
+    //             throw new FileManagementException("Directory path is invalid: " + targetDirectoryPath);
+    //         }
+    //         File targetDir = this.getAbsolutePath(targetDirectoryPath).toFile();
+    //         return this.deleteFile(targetDir);
+    //     } catch (Exception e) {
+    //         throw new FileManagementException("A problem occured while deleting: " + targetDirectoryPath);
+    //     }
+    // }
 
     /**
      * Deletes the target directory (or file), the contents of the target directory
@@ -367,15 +367,15 @@ public class FileSystemService {
      * 
      * @param targetDir The directory which is to be deleted.
      */
-    private Boolean deleteFile(File targetDir) {
-        File[] contents = targetDir.listFiles();
-        if (contents != null) {
-            for (File file : contents) {
-                this.deleteFile(file);
-            }
-        }
-        return targetDir.delete();
-    }
+    // private Boolean deleteFile(File targetDir) {
+    //     File[] contents = targetDir.listFiles();
+    //     if (contents != null) {
+    //         for (File file : contents) {
+    //             this.deleteFile(file);
+    //         }
+    //     }
+    //     return targetDir.delete();
+    // }
 
     /**
      * Renames the file in the file system.

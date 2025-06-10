@@ -20,7 +20,7 @@ public class ChunkService {
         return chunkRepository.save(chunk);
     }
 
-    public Chunk findById(Integer id) throws FileManagementException {
+    public Chunk findById(Long id) throws FileManagementException {
         return chunkRepository.findById(id)
                 .orElseThrow(() -> new FileManagementException("A file with this ID was not found."));
     }
@@ -46,8 +46,8 @@ public class ChunkService {
     //             .orElseThrow(() -> new FileManagementException("A file with this name was not found for this user."));
     // }
 
-    public Integer deleteChunkByIdAndOwner(Integer chunk_id, User owner) {
-        return chunkRepository.deleteChunkByIdAndOwner(chunk_id, owner);
+    public Integer deleteChunkByIdAndOwner(Long chunkId, User owner) {
+        return chunkRepository.deleteChunkByIdAndOwner(chunkId, owner);
     }
 
     public ChunkReference[] getFavoritesForUser(User user) {

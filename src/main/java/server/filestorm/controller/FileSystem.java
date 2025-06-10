@@ -47,9 +47,9 @@ public class FileSystem {
     @Autowired
     private DirectoryService directoryService;
 
-    @GetMapping("/api/file")
+    @GetMapping("/api/file/{fileId}")
     public DeferredResult<ResponseEntity<?>> downloadFile(
-            @RequestParam Long fileId,
+            @PathVariable Long fileId,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<?>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
@@ -96,39 +96,33 @@ public class FileSystem {
         return res;
     }
 
-    @DeleteMapping("/api/file")
+    @DeleteMapping("/api/file/{fileId}")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> deleteFile(
-            @RequestParam String targetDirectoryPath,
-            @RequestParam String targetFileName,
-            @RequestParam Integer targetFileId,
+            @PathVariable Long fileId,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
 
-        Integer userId = session.getUserId();
+        Long userId = session.getUserId();
         User user = userService.findById(userId);
 
-        // validate directory and file existance and ownership in DB
-        userService.verifyDirectoryExistance(user, targetDirectoryPath);
-        chunkService.findChunkByIdAndOwner(targetFileId, user);
-
-        // check chunk existance in dir reference in DB
-        userService.verifyChunkRefInDirRef(user, targetDirectoryPath, targetFileName, targetFileId);
+        // verify file existance and ownership in DB
+        Chunk chunkForDeletion = chunkService.findChunkByIdAndOwner(fileId, user);
 
         // delete chunk from FS
-        boolean isChunkDeleted = fileSystemService.deleteUserFile(targetDirectoryPath, targetFileName);
+        boolean isChunkDeleted = fileSystemService.deleteFile(chunkForDeletion);
         if (!isChunkDeleted) {
-            throw new FileManagementException("Could not delete file: " + targetFileName);
+            throw new FileManagementException("Could not delete file: " + chunkForDeletion.getName());
         }
 
         // delete chunk from DB
-        Integer deletedChunkId = userService.deleteChunkAndRefFromDirRef(user, targetDirectoryPath, targetFileName);
+        Integer deletedChunkId = chunkService.deleteChunkByIdAndOwner(chunkForDeletion.getId(), user);
         if (deletedChunkId == null) {
-            throw new FileManagementException("Could not delete file: " + targetFileName);
+            throw new FileManagementException("Could not delete file: " + chunkForDeletion.getName());
         }
 
         res.setResult(ResponseEntity.ok()
-                .body(new ApiResponse<Integer>("File deleted.", deletedChunkId)));
+                .body(new ApiResponse<Long>("File deleted.", chunkForDeletion.getId())));
 
         return res;
     }
