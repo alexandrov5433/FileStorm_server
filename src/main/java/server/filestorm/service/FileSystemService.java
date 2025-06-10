@@ -232,7 +232,7 @@ public class FileSystemService {
 
     /**
      * Creates a new derectory in the root storage directory of the server
-     * (rootLocation).
+     * (rootLocation). Returns the File object of the newly created directory.
      * 
      * @param userRootDirectoryName The name of the new user-specific directory.
      *                              This will be the base (root) of the directory
@@ -242,7 +242,7 @@ public class FileSystemService {
      *                                 not be created with
      *                                 File.mkdir().
      */
-    public DirectoryReference createRootDirectoryForUser(String userRootDirectoryName) throws FileManagementException, ProcessingException {
+    public File createRootDirectoryForUser(String userRootDirectoryName) throws FileManagementException, ProcessingException {
         File newDir = this.getAbsolutePath(userRootDirectoryName).toFile();
 
         // check if already exists
@@ -255,7 +255,7 @@ public class FileSystemService {
         if (!isFileCreated) {
             throw new FileManagementException("Could not create new derectory.");
         }
-        return new DirectoryReference(userRootDirectoryName);
+        return newDir;
     }
 
     /**
