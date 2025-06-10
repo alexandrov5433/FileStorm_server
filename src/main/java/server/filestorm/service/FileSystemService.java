@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import server.filestorm.config.ServerConfigurationProperties;
@@ -23,6 +24,8 @@ import server.filestorm.exception.FileManagementException;
 import server.filestorm.exception.ProcessingException;
 import server.filestorm.exception.StorageException;
 import server.filestorm.model.entity.Chunk;
+import server.filestorm.model.entity.Directory;
+import server.filestorm.model.entity.User;
 import server.filestorm.model.type.FileUploadData;
 import server.filestorm.model.type.fileManagement.DirectoryReference;
 import server.filestorm.util.PathUtil;
@@ -30,13 +33,16 @@ import server.filestorm.util.PathUtil;
 @Service
 public class FileSystemService {
 
+    private final ChunkService chunkService;
+
     private final Path rootLocation;
 
-    public FileSystemService(ServerConfigurationProperties confProps) {
+    public FileSystemService(ServerConfigurationProperties confProps, ChunkService chunkService) {
         if (confProps.getFileStorageLocation().trim().length() == 0) {
             throw new ConfigurationException("File upload location can not be empty.");
         }
         this.rootLocation = Paths.get(confProps.getFileStorageLocation());
+        this.chunkService = chunkService;
     }
 
     /**
@@ -58,7 +64,9 @@ public class FileSystemService {
      * @throws IOException
      * @throws URISyntaxException
      */
-    public Chunk store(FileUploadData fileUploadData, Integer userId) throws FileManagementException {
+    @Transactional
+    public Chunk store(FileUploadData fileUploadData, User user, Directory targetDirectory)
+            throws FileManagementException {
         try {
             MultipartFile file = fileUploadData.getFile();
 
@@ -67,30 +75,45 @@ public class FileSystemService {
                 throw new StorageException("Failed to store empty file.");
             }
 
-            // check path is valid string
-            String relativeFilePath = PathUtil.standardizeRelativePathString(fileUploadData.getRelativePath());
-            PathUtil.verifyRelativePath(relativeFilePath, userId);
-
             // check file name is valid
-            String fileName = PathUtil.sanitizeFileName(file.getOriginalFilename());
+            String originalFileName = PathUtil.sanitizeFileName(file.getOriginalFilename());
 
-            // check directory and file existence
-            boolean uploadDirExists = this.verifyExistance(relativeFilePath);
+            // check directory existence
+            boolean uploadDirExists = this.verifyExistance(Long.toString(user.getId()));
             if (!uploadDirExists) {
-                throw new FileManagementException("The upload directory does not exist: " + relativeFilePath);
+                throw new FileManagementException("The upload directory does not exist.");
             }
 
-            // check if file with this name already exists
-            boolean fileExistsInDir = this.verifyExistance(
-                    PathUtil.concatNameAtEndOfPath(relativeFilePath, fileName));
-            if (fileExistsInDir) {
-                throw new FileManagementException(
-                        "A file with this name exists in this directory: " + fileExistsInDir);
-            }
+            Chunk chunk = new Chunk();
+            chunk.setOwner(user);
+            chunk.setDirectory(targetDirectory);
+            chunk.setAbsoluteFilePath("tempVal");
+            chunk.setName("tempVal");
+            chunk.setOriginalFileName(originalFileName);
+            chunk.setSizeBytes(file.getSize());
+            chunk.setMimeType(file.getContentType());
+
+            chunk = chunkService.saveChunk(chunk);
+
+            String fileName = String.format("%1$s___%2$s", Long.toString(chunk.getId()), originalFileName);
+            chunk.setName(fileName);
+            chunk.setAbsoluteFilePath(
+                    getAbsolutePath(Long.toString(user.getId()), fileName).toString());
+
+            chunk = chunkService.saveChunk(chunk);
+
+            // add chunk to the chunk list in the directory
+            targetDirectory.addChunk(chunk);
 
             // build path to save file
-            Path destinationFile = this.getAbsolutePath(
-                    PathUtil.concatNameAtEndOfPath(relativeFilePath, fileName));
+            Path destinationFile = getAbsolutePath(chunk);
+
+            // check if file with this name already exists
+            boolean fileExistsInDir = this.verifyExistance(destinationFile);
+            if (fileExistsInDir) {
+                throw new FileManagementException(
+                        "A file with this name exists in this directory.");
+            }
 
             // check file is not being saved in server root storage
             if (destinationFile.equals(this.rootLocation.toAbsolutePath())) {
@@ -108,13 +131,8 @@ public class FileSystemService {
             }
 
             // return Chunk
-            Chunk chunk = new Chunk();
-            chunk.setAbsoluteFilePath(destinationFile.toString());
-            chunk.setName(fileName);
-            chunk.setRelativeFilePath(relativeFilePath);
-            chunk.setSizeBytes(file.getSize());
-            chunk.setMimeType(file.getContentType());
             return chunk;
+
         } catch (Exception e) {
             throw new FileManagementException(e.getMessage(), e);
         }
@@ -190,16 +208,6 @@ public class FileSystemService {
     // }
     // }
 
-    Stream<Path> loadAll() {
-        try {
-            return Files.walk(this.rootLocation, 1)
-                    .filter(path -> !path.equals(this.rootLocation))
-                    .map(this.rootLocation::relativize);
-        } catch (IOException e) {
-            throw new StorageException("Failed to read stored files.", e);
-        }
-    }
-
     public Resource loadAsResource(Chunk chunk) {
         try {
             Path path = this.getAbsolutePath(chunk);
@@ -242,7 +250,8 @@ public class FileSystemService {
      *                                 not be created with
      *                                 File.mkdir().
      */
-    public File createRootDirectoryForUser(String userRootDirectoryName) throws FileManagementException, ProcessingException {
+    public File createRootDirectoryForUser(String userRootDirectoryName)
+            throws FileManagementException, ProcessingException {
         File newDir = this.getAbsolutePath(userRootDirectoryName).toFile();
 
         // check if already exists
@@ -258,51 +267,52 @@ public class FileSystemService {
         return newDir;
     }
 
-    /**
-     * Creates a new subdirectory in the user-specific storage derectory.
-     * 
-     * @param subDirectoryPath The path to the directory in which the new
-     *                         subdirectory must be placed. This path is relative to
-     *                         the rootStorage directory of the server. It must
-     *                         start with the user´s root storage directory. E.g.
-     *                         "/11/firstSubdirectory/targetSubDirectory". 11 is the
-     *                         user´s root storage directory.
-     * @param newDirectoryName The name of the new subdirectory - e.g. "new_docs",
-     *                         which will produce
-     *                         "/11/firstSubdirectory/targetSubDirectory/new_docs".
-     * @throws FileManagementException When subDirectoryPath does not exist, is not
-     *                                 readable or writable, or when the new
-     *                                 directory could not be created with
-     *                                 File.mkdir().
-     * @throws ProcessingException
-     */
-    public DirectoryReference createSubDirectoryForUser(String subDirectoryPath, String newDirectoryName) throws FileManagementException, ProcessingException {
-        // sanitize new name
-        newDirectoryName = PathUtil.sanitizeFileName(newDirectoryName);
-        if (newDirectoryName.length() == 0 || newDirectoryName == null) {
-            throw new FileManagementException("This directory name is invalid.");
-        }
-        // check sub dir and new dir existance
-        boolean subDirExists = this.verifyExistance(subDirectoryPath);
-        if (!subDirExists) {
-            throw new FileManagementException("The targeted subdirectory does not exist: " + subDirectoryPath);
-        }
-        boolean newDirExistsInSubDir = this.verifyExistance(
-                PathUtil.concatNameAtEndOfPath(subDirectoryPath, newDirectoryName));
-        if (newDirExistsInSubDir) {
-            throw new FileManagementException(
-                    "This directory already includes a directory with this name: " + newDirectoryName);
-        }
+    // /**
+    //  * Creates a new subdirectory in the user-specific storage derectory.
+    //  * 
+    //  * @param subDirectoryPath The path to the directory in which the new
+    //  *                         subdirectory must be placed. This path is relative to
+    //  *                         the rootStorage directory of the server. It must
+    //  *                         start with the user´s root storage directory. E.g.
+    //  *                         "/11/firstSubdirectory/targetSubDirectory". 11 is the
+    //  *                         user´s root storage directory.
+    //  * @param newDirectoryName The name of the new subdirectory - e.g. "new_docs",
+    //  *                         which will produce
+    //  *                         "/11/firstSubdirectory/targetSubDirectory/new_docs".
+    //  * @throws FileManagementException When subDirectoryPath does not exist, is not
+    //  *                                 readable or writable, or when the new
+    //  *                                 directory could not be created with
+    //  *                                 File.mkdir().
+    //  * @throws ProcessingException
+    //  */
+    // public DirectoryReference createSubDirectoryForUser(String subDirectoryPath, String newDirectoryName)
+    //         throws FileManagementException, ProcessingException {
+    //     // sanitize new name
+    //     newDirectoryName = PathUtil.sanitizeFileName(newDirectoryName);
+    //     if (newDirectoryName.length() == 0 || newDirectoryName == null) {
+    //         throw new FileManagementException("This directory name is invalid.");
+    //     }
+    //     // check sub dir and new dir existance
+    //     boolean subDirExists = this.verifyExistance(subDirectoryPath);
+    //     if (!subDirExists) {
+    //         throw new FileManagementException("The targeted subdirectory does not exist: " + subDirectoryPath);
+    //     }
+    //     boolean newDirExistsInSubDir = this.verifyExistance(
+    //             PathUtil.concatNameAtEndOfPath(subDirectoryPath, newDirectoryName));
+    //     if (newDirExistsInSubDir) {
+    //         throw new FileManagementException(
+    //                 "This directory already includes a directory with this name: " + newDirectoryName);
+    //     }
 
-        File newDir = this.getAbsolutePath(
-                PathUtil.concatNameAtEndOfPath(subDirectoryPath, newDirectoryName)).toFile();
-        boolean isDirectoryCreated = newDir.mkdir();
-        if (!isDirectoryCreated) {
-            throw new FileManagementException("Could not create the new derectory: " + newDirectoryName);
-        }
+    //     File newDir = this.getAbsolutePath(
+    //             PathUtil.concatNameAtEndOfPath(subDirectoryPath, newDirectoryName)).toFile();
+    //     boolean isDirectoryCreated = newDir.mkdir();
+    //     if (!isDirectoryCreated) {
+    //         throw new FileManagementException("Could not create the new derectory: " + newDirectoryName);
+    //     }
 
-        return new DirectoryReference(newDirectoryName);
-    }
+    //     return new DirectoryReference(newDirectoryName);
+    // }
 
     /**
      * Deletes the File on the given path.
@@ -312,7 +322,8 @@ public class FileSystemService {
      * @throws FileManagementException When the path is not valid or an unexpected
      *                                 exeption occurs.
      */
-    public Boolean deleteUserFile(String targetDirPath, String targetFileName) throws FileManagementException, ProcessingException {
+    public Boolean deleteUserFile(String targetDirPath, String targetFileName)
+            throws FileManagementException, ProcessingException {
         try {
             String fullPathString = PathUtil.concatNameAtEndOfPath(targetDirPath, targetFileName);
             boolean isValid = verifyExistance(fullPathString);
@@ -368,12 +379,17 @@ public class FileSystemService {
 
     /**
      * Renames the file in the file system.
-     * @param targetDir The directory where the file can be found.
+     * 
+     * @param targetDir   The directory where the file can be found.
      * @param oldFileName The old name of the file. Is used to find the file.
      * @param newFileName The new name of the file.
-     * @throws FileManagementException When the old file can not be found in the given directory. When the directory itself is invalid. When the File.renameTo() method could not rename the file. 
+     * @throws FileManagementException When the old file can not be found in the
+     *                                 given directory. When the directory itself is
+     *                                 invalid. When the File.renameTo() method
+     *                                 could not rename the file.
      */
-    public void changeFileName(String targetDir, String oldFileName, String newFileName) throws FileManagementException {
+    public void changeFileName(String targetDir, String oldFileName, String newFileName)
+            throws FileManagementException {
         boolean isTargetDirValid = verifyExistance(targetDir);
         if (!isTargetDirValid) {
             throw new FileManagementException("Target directory does not exist.");
@@ -399,12 +415,26 @@ public class FileSystemService {
      * @param relativeFilePath The relative file path, which will be resolved
      *                         against the rootLocation - the root storage location
      *                         of the server. E.g. for relativeFilePath:
-     *                         "11/my_docs/work".
+     *                         "11/my_doc.pdf".
      */
     private Path getAbsolutePath(String relativeFilePath) throws ProcessingException {
         relativeFilePath = PathUtil.standardizeRelativePathString(relativeFilePath);
         return this.rootLocation
                 .resolve(Paths.get(relativeFilePath))
+                .normalize().toAbsolutePath();
+    }
+
+    /**
+     * Cretes a Path object with absolute path, using the rootLocation (of the
+     * server) and the given userId and fileName.
+     * 
+     * @param userId   The ID of the user. Is used to indicate the root directory of
+     *                 the user.
+     * @param fileName The name of the file, found in the root user directory.
+     */
+    private Path getAbsolutePath(String userId, String fileName) throws ProcessingException {
+        return this.rootLocation
+                .resolve(Paths.get(String.format("%1$s/%2$s", userId, fileName)))
                 .normalize().toAbsolutePath();
     }
 

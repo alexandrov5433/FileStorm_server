@@ -4,6 +4,8 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.hibernate.Length;
+
 import jakarta.annotation.Nonnull;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -35,7 +37,11 @@ public class Chunk {
     @Column(nullable = false, length = 2500)
     private String name;
 
-    @Column(name = "absolute_file_path", nullable = false, length = 2500)
+    @Column(name = "original_file_name", nullable = false, length = 2500)
+    private String originalFileName;
+
+    @Column(name = "absolute_file_path", nullable = false, length = Length.LONG32)
+    // 32-bit (2147483647) string == TEXT type in PostgreSQL
     private String absoluteFilePath;
 
     @Column(name = "created_on", nullable = false, updatable = false)
@@ -108,6 +114,14 @@ public class Chunk {
 
     public String getName() {
         return this.name;
+    }
+
+    public String getOriginalFileName() {
+        return originalFileName;
+    }
+
+    public void setOriginalFileName(String originalFileName) {
+        this.originalFileName = originalFileName;
     }
 
     public void setName(String name) {

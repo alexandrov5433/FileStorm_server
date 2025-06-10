@@ -12,6 +12,7 @@ import org.springframework.web.context.request.async.DeferredResult;
 
 import server.filestorm.exception.FileManagementException;
 import server.filestorm.model.entity.Chunk;
+import server.filestorm.model.entity.Directory;
 import server.filestorm.model.entity.User;
 import server.filestorm.model.type.ApiResponse;
 import server.filestorm.model.type.CustomSession;
@@ -21,6 +22,7 @@ import server.filestorm.model.type.fileManagement.DirectoryCreationData;
 import server.filestorm.model.type.fileManagement.DirectoryReference;
 import server.filestorm.model.type.fileManagement.HydratedDirectoryReference;
 import server.filestorm.service.ChunkService;
+import server.filestorm.service.DirectoryService;
 import server.filestorm.service.FileSystemService;
 import server.filestorm.service.UserService;
 import server.filestorm.util.CustomHttpServletRequestWrapper;
@@ -41,6 +43,9 @@ public class FileSystem {
 
     @Autowired
     private ChunkService chunkService;
+
+    @Autowired
+    private DirectoryService directoryService;
 
     @GetMapping("/api/file")
     public DeferredResult<ResponseEntity<?>> downloadFile(
@@ -68,13 +73,12 @@ public class FileSystem {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
 
-        Integer userId = session.getUserId();
+        Long userId = session.getUserId();
         User user = userService.findById(userId);
 
-        // check upload dir path string and entry in DB
-        String relativeFilePath = PathUtil.standardizeRelativePathString(fileUploadData.getRelativePath());
-        PathUtil.verifyRelativePath(relativeFilePath, userId);
-        userService.verifyDirectoryExistance(user, relativeFilePath);
+        Long targetDirectoryId = fileUploadData.getTargetDirectoryId();
+        // check upload dir and entry in DB
+        Directory directory = directoryService.getDirectory(targetDirectoryId);
 
         // check storage space availability
         Long fileSize = fileUploadData.getFile().getSize();
@@ -83,14 +87,9 @@ public class FileSystem {
         }
 
         // save file is FS
-        Chunk chunk = fileSystemService.store(fileUploadData, userId);
+        Chunk chunk = fileSystemService.store(fileUploadData, user, directory);
 
-        // add owner reference
-        chunk.setOwner(user);
-
-        // save Chunk in DB and add reference in dir
-        Chunk newChunk = userService.saveChunkAndAddChunkInDirRef(chunk, user, relativeFilePath);
-        ChunkReference chunkRef = new ChunkReference(newChunk);
+        ChunkReference chunkRef = new ChunkReference(chunk);
 
         res.setResult(ResponseEntity.ok()
                 .body(new ApiResponse<ChunkReference>("File saved.", chunkRef)));
