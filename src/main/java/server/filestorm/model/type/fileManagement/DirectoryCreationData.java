@@ -1,25 +1,20 @@
 package server.filestorm.model.type.fileManagement;
 
 public class DirectoryCreationData {
-    private String targetDirectoryPath;
+    private Long targetDirectoryId;
     private String newDirectoryName;
 
-    public DirectoryCreationData() {
-        this.targetDirectoryPath = null;
-        this.newDirectoryName = null;
-    }
-
-    public DirectoryCreationData(String targetDirectoryPath, String newDirectoryName) {
-        this.targetDirectoryPath = targetDirectoryPath;
+    public DirectoryCreationData(Long targetDirectoryId, String newDirectoryName) {
+        this.targetDirectoryId = targetDirectoryId;
         this.newDirectoryName = newDirectoryName;
     }
 
-    public String getTargetDirectoryPath() {
-        return targetDirectoryPath;
+    public Long getTargetDirectoryId() {
+        return targetDirectoryId;
     }
 
-    public void setTargetDirectoryPath(String targetDirectoryPath) {
-        this.targetDirectoryPath = targetDirectoryPath;
+    public void setTargetDirectoryId(Long targetDirectoryId) {
+        this.targetDirectoryId = targetDirectoryId;
     }
 
     public String getNewDirectoryName() {
