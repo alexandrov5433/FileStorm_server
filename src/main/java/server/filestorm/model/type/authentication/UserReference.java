@@ -4,33 +4,33 @@ import java.io.Serializable;
 
 import server.filestorm.model.entity.User;
 
-public class UserReference implements Serializable{
+public class UserReference implements Serializable {
     private Long id;
     private String username;
     private String email;
-    private Long max_storage_space;
-    private Long bytes_in_storage;
+    private Long maxStorageSpace;
+    private Long bytesInStorage;
 
     public UserReference() {
         this.id = null;
         this.username = null;
         this.email = null;
-        this.max_storage_space = null;
-        this.bytes_in_storage = null;
+        this.maxStorageSpace = null;
+        this.bytesInStorage = null;
     }
 
     public UserReference(User user) {
         this.id = user.getId();
         this.username = user.getUsername();
         this.email = user.getEmail();
-        this.max_storage_space = user.getMaxStorageSpace();
-        this.bytes_in_storage = user.getBytesInStorage();
+        this.maxStorageSpace = user.getMaxStorageSpace();
+        this.bytesInStorage = user.getBytesInStorage();
     }
 
     public Long getId() {
         return id;
     }
-    
+
     public void setId(Long id) {
         this.id = id;
     }
@@ -51,19 +51,19 @@ public class UserReference implements Serializable{
         this.email = email;
     }
 
-    public Long getMax_storage_space() {
-        return max_storage_space;
+    public Long getMaxStorageSpace() {
+        return maxStorageSpace;
     }
 
-    public void setMax_storage_space(Long max_storage_space) {
-        this.max_storage_space = max_storage_space;
+    public void setMaxStorageSpace(Long maxStorageSpace) {
+        this.maxStorageSpace = maxStorageSpace;
     }
 
-    public Long getBytes_in_storage() {
-        return bytes_in_storage;
+    public Long getBytesInStorage() {
+        return bytesInStorage;
     }
 
-    public void setBytes_in_storage(Long bytes_in_storage) {
-        this.bytes_in_storage = bytes_in_storage;
+    public void setBytesInStorage(Long bytesInStorage) {
+        this.bytesInStorage = bytesInStorage;
     }
 }
