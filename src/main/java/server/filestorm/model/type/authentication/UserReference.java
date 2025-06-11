@@ -5,7 +5,7 @@ import java.io.Serializable;
 import server.filestorm.model.entity.User;
 
 public class UserReference implements Serializable{
-    private Integer id;
+    private Long id;
     private String username;
     private String email;
     private Long max_storage_space;
@@ -27,11 +27,11 @@ public class UserReference implements Serializable{
         this.bytes_in_storage = user.getBytesInStorage();
     }
 
-    public int getId() {
+    public Long getId() {
         return id;
     }
     
-    public void setId(int id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
