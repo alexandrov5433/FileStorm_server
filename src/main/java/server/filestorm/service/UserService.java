@@ -1,37 +1,19 @@
 package server.filestorm.service;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import server.filestorm.exception.AuthenticationException;
-import server.filestorm.exception.FileManagementException;
-import server.filestorm.exception.ProcessingException;
-import server.filestorm.exception.StorageException;
-import server.filestorm.model.entity.Chunk;
 import server.filestorm.model.entity.User;
 import server.filestorm.model.repository.UserRepository;
-import server.filestorm.model.type.fileManagement.ChunkReference;
-import server.filestorm.model.type.fileManagement.DirectoryReference;
-import server.filestorm.model.type.fileManagement.HydratedDirectoryReference;
-import server.filestorm.util.PathUtil;
 
 @Service
 public class UserService {
 
     @Autowired
     private UserRepository userRepository;
-
-    @Autowired
-    private ChunkService chunkService;
 
     public User saveNewUser(User user) {
         return userRepository.save(user);
