@@ -1,5 +1,7 @@
 package server.filestorm.controller;
 
+import java.util.ArrayList;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
@@ -212,43 +214,33 @@ public class FileSystem {
         return res;
     }
 
-    @DeleteMapping("/api/directory")
+    @DeleteMapping("/api/directory/{directoryId}")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> deleteDirectory(
-            @RequestParam String targetDirectoryPath,
+            @PathVariable Long directoryId,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
 
-        Integer userId = session.getUserId();
-        String rootUserStorageDir = String.format("%1$d", userId);
+        Long userId = session.getUserId();
         User user = userService.findById(userId);
 
-        // check target dir starts with root user storage dir
-        PathUtil.verifyRelativePath(targetDirectoryPath, userId);
-
-        // check target dir is not root user storage dir
-        if (targetDirectoryPath.equals(rootUserStorageDir)) {
+        // check target dir and that it is not root user storage dir
+        Directory targetDirectory = directoryService.findDirectoryForUserById(directoryId, user);
+        if (targetDirectory.getName() == Long.toString(userId) && targetDirectory.getParentDirectory() == null) {
             throw new FileManagementException(
                     "The targeted directory for deletion can not be the root user storage directory.");
         }
 
-        // check directory existance in DB
-        userService.verifyDirectoryExistance(user, targetDirectoryPath);
+        // collect everything for deletion
+        ArrayList<Chunk> chunksForDeletion = directoryService.extractChunksFromDirAndSubDirs(targetDirectory);
+        ArrayList<Directory> directoriesForDeletion = directoryService.extractDirectoriesFromDirAndSubDirs(targetDirectory);
+        directoriesForDeletion.add(targetDirectory);
 
-        // delete directory form FS and everything in it
-        boolean isDirectoryDeleted = fileSystemService.deleteUserDirectory(targetDirectoryPath);
-        if (!isDirectoryDeleted) {
-            throw new FileManagementException("Could not delete directory.");
-        }
-
-        // delete dir reference form DB and everything in it
-        DirectoryReference deletedDirRef = userService.deleteDirectory(user, targetDirectoryPath);
-        if (deletedDirRef == null) {
-            throw new FileManagementException("Could not delete directory.");
-        }
+        // delete files form FS and DB and directories from DB
+        fileSystemService.deleteDirectoryAndFiles(directoriesForDeletion, chunksForDeletion, user);
 
         res.setResult(ResponseEntity.ok()
-                .body(new ApiResponse<DirectoryReference>("Directory deleted.", deletedDirRef)));
+                .body(new ApiResponse<Long>("Directory deleted.", directoryId )));
         return res;
     }
 }

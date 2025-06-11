@@ -12,4 +12,7 @@ public interface DirectoryRepository extends JpaRepository<Directory, Long>{
 
     @Query("SELECT d FROM Directory d WHERE d.id = ?1 AND d.owner = ?2")
     Optional<Directory> findDirectoryForUserById(Long directoryId, User owner);
+
+    @Query("DELETE FROM Directory d WHERE d.id = ?1 AND d.owner = ?2")
+    Integer deleteDirectoryForUserById(Long directoryId, User owner);
 }

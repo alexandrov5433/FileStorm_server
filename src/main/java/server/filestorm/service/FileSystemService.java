@@ -1,16 +1,14 @@
 package server.filestorm.service;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.stream.Stream;
+import java.util.ArrayList;
 
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -27,7 +25,6 @@ import server.filestorm.model.entity.Chunk;
 import server.filestorm.model.entity.Directory;
 import server.filestorm.model.entity.User;
 import server.filestorm.model.type.FileUploadData;
-import server.filestorm.model.type.fileManagement.DirectoryReference;
 import server.filestorm.util.PathUtil;
 
 @Service
@@ -35,34 +32,27 @@ public class FileSystemService {
 
     private final ChunkService chunkService;
 
+    private final DirectoryService directoryService;
+
     private final Path rootLocation;
 
-    public FileSystemService(ServerConfigurationProperties confProps, ChunkService chunkService) {
+    public FileSystemService(ServerConfigurationProperties confProps, ChunkService chunkService, DirectoryService directoryService) {
         if (confProps.getFileStorageLocation().trim().length() == 0) {
             throw new ConfigurationException("File upload location can not be empty.");
         }
         this.rootLocation = Paths.get(confProps.getFileStorageLocation());
         this.chunkService = chunkService;
+        this.directoryService = directoryService;
     }
 
     /**
-     * Saves the given file using a given relative path.
+     * Saves the given file and assigns it the user as owner and the directory as the one containing the file.
      * 
-     * @param file     The file which is to be saved. The name of the file is
-     *                 extracted from this property and used to generate the
-     *                 absolute path.
-     * @param filePath The string path to the file, relative to the root,
-     *                 user-specific storage directory. E.g. "11/" or
-     *                 "11/books/fantasy". Save location example with file name
-     *                 "lotr.pdf"
-     *                 "D:/somePlatformDirectory/rootLocation/11/books/fantasy/lotr.pdf",
-     *                 where rootLocation and everything before it comes from
-     *                 ServerConfigurationProperties.
-     * @param userId   The id of the user submitting the file.
-     * @return The Chunk comes with the following properties set: name,
-     *         absolute_file_path, mime_type and size_bytes.
-     * @throws IOException
-     * @throws URISyntaxException
+     * @param fileUploadData     The file upload data, containing the file it self.
+     * @param user   The user submitting the file.
+     * @param targetDirectory   The directory under which the file is to be saved.
+     * @return The Chunk created for this file.
+     * @throws FileManagementException
      */
     @Transactional
     public Chunk store(FileUploadData fileUploadData, User user, Directory targetDirectory)
@@ -313,6 +303,27 @@ public class FileSystemService {
 
     //     return new DirectoryReference(newDirectoryName);
     // }
+
+    /**
+     * Deletes all given directories from DB and then all chunks from FS and DB.
+     * @param directories Directories to delete.
+     * @param chunks Chunks to delete.
+     * @param owner The user owner of the directories and chunks.
+     */
+    @Transactional
+    public void deleteDirectoryAndFiles(
+        ArrayList<Directory> directories,
+        ArrayList<Chunk> chunks,
+        User owner
+    ) {
+        for (Directory d : directories) {
+            directoryService.deleteDirectoryForUserById(d.getId(), owner);
+        }
+        for (Chunk c : chunks) {
+            deleteFile(c);
+            chunkService.deleteChunkByIdAndOwner(c.getId(), owner);
+        }
+    }
 
     /**
      * Deletes the file referenced in the chunk.

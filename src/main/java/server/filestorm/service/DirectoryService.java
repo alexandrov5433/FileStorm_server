@@ -51,6 +51,10 @@ public class DirectoryService {
         return directoryRepository.save(dir);
     }
 
+    public Integer deleteDirectoryForUserById(Long directoryId, User owner) {
+        return directoryRepository.deleteDirectoryForUserById(directoryId, owner);
+    }
+
     public Directory findDirectoryForUserById(Long directoryId, User owner) {
         return directoryRepository.findDirectoryForUserById(directoryId, owner)
             .orElseThrow(() -> new StorageException("Directory could not be found."));
