@@ -10,7 +10,7 @@ public class CustomSession {
 
     public CustomSession(Map<String, Object> claims) {
         this.claims = claims;
-        this.user_id = (Long) this.claims.get("id");
+        this.user_id = Long.valueOf(String.valueOf(this.claims.get("id")));
         this.username = (String) this.claims.get("username");
     }
 

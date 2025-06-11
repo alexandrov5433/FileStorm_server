@@ -146,10 +146,10 @@ public class Authentication {
                             .header("Set-Cookie", setCookieHeaderDeletionValue)
                             .body(new ApiResponse<>("No session.")));
         } else {
-            Map<String, Object> claims = session.getClaims();
-            Long id = (Long) claims.get("id");
-            String username = (String) claims.get("username");
-            if (id == null || username == null) {
+            Long userId = session.getUserId();
+            String username = session.getUsername();
+
+            if (userId == null || username == null) {
                 res.setResult(
                         ResponseEntity.badRequest()
                                 .header("Set-Cookie", setCookieHeaderDeletionValue)
@@ -157,7 +157,7 @@ public class Authentication {
                 return res;
             }
 
-            User user = authService.validateSessionData(id, username);
+            User user = authService.validateSessionData(userId, username);
             if (user == null) {
                 res.setResult(
                         ResponseEntity.badRequest()
