@@ -15,16 +15,13 @@ public interface ChunkRepository extends JpaRepository<Chunk, Long>{
     @Query("SELECT c FROM Chunk c WHERE c.id = ?1 AND c.owner = ?2")
     Optional<Chunk> findChunkByIdAndOwner(Long id, User owner);
 
-    // @Query("SELECT c FROM Chunk c WHERE c.name = ?1 AND c.owner = ?2")
-    // Optional<Chunk> findChunkByNameAndOwner(String name, User owner);
-
     @Modifying
     @Query("DELETE FROM Chunk c WHERE c.id = ?1 AND c.owner = ?2")
     Integer deleteChunkByIdAndOwner(Long chunk_id, User owner);
 
-    @Query("SELECT c FROM Chunk c WHERE c.owner = ?1 AND c.share_option != 'PRIVATE'")
+    @Query("SELECT c FROM Chunk c WHERE c.owner = ?1 AND c.shareOption != 'PRIVATE'")
     Optional<List<Chunk>> getFilesUserIsSharing(User owner);
 
-    @Query("SELECT c FROM Chunk c WHERE c.is_favorite = TRUE AND c.owner = ?1")
+    @Query("SELECT c FROM Chunk c WHERE c.isFavorite = TRUE AND c.owner = ?1")
     Optional<List<Chunk>> getFavoritesForUser(User owner);
 }

@@ -36,7 +36,7 @@ public class User {
     private Long bytesInStorage = Long.valueOf("0");
 
     @Column(name = "chunks_shared_with_me")
-    @ManyToMany(mappedBy = "share_with")
+    @ManyToMany(mappedBy = "shareWith")
     private Set<Chunk> chunksSharedWithMe;
 
     // @JdbcTypeCode(SqlTypes.JSON)
