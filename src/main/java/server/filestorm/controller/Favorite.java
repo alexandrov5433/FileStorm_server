@@ -34,7 +34,7 @@ public class Favorite {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
 
-        Integer userId = session.getUserId();
+        Long userId = session.getUserId();
         User user = userService.findById(userId);
 
         ChunkReference[] favorites = chunkService.getFavoritesForUser(user);
@@ -46,12 +46,12 @@ public class Favorite {
 
     @PostMapping("/api/favorite/{fileId}")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> markFileAsFavorite(
-            @PathVariable Integer fileId,
+            @PathVariable Long fileId,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
 
-        Integer userId = session.getUserId();
+        Long userId = session.getUserId();
         User user = userService.findById(userId);
 
         // check file existance and ownership
@@ -61,19 +61,19 @@ public class Favorite {
         Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
         chunkService.markChunkAsFavorite(chunk);
 
-        res.setResult(ResponseEntity.ok().body(new ApiResponse<>("File marked as favorite.")));
+        res.setResult(ResponseEntity.ok().body(new ApiResponse<ChunkReference>("File marked as favorite.", new ChunkReference(chunk))));
 
         return res;
     }
 
     @DeleteMapping("/api/favorite/{fileId}")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> removeFileFromFavorite(
-            @PathVariable Integer fileId,
+            @PathVariable Long fileId,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
 
-        Integer userId = session.getUserId();
+        Long userId = session.getUserId();
         User user = userService.findById(userId);
 
         // check file existance and ownership
@@ -83,7 +83,7 @@ public class Favorite {
         Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
         chunkService.removeChunkFromFavorite(chunk);
 
-        res.setResult(ResponseEntity.ok().body(new ApiResponse<>("File removed from favorite.")));
+        res.setResult(ResponseEntity.ok().body(new ApiResponse<ChunkReference>("File removed from favorite.", new ChunkReference(chunk))));
 
         return res;
     }
