@@ -388,36 +388,36 @@ public class FileSystemService {
     //     return targetDir.delete();
     // }
 
-    /**
-     * Renames the file in the file system.
-     * 
-     * @param targetDir   The directory where the file can be found.
-     * @param oldFileName The old name of the file. Is used to find the file.
-     * @param newFileName The new name of the file.
-     * @throws FileManagementException When the old file can not be found in the
-     *                                 given directory. When the directory itself is
-     *                                 invalid. When the File.renameTo() method
-     *                                 could not rename the file.
-     */
-    public void changeFileName(String targetDir, String oldFileName, String newFileName)
-            throws FileManagementException {
-        boolean isTargetDirValid = verifyExistance(targetDir);
-        if (!isTargetDirValid) {
-            throw new FileManagementException("Target directory does not exist.");
-        }
-        Path oldPath = getAbsolutePath(PathUtil.concatNameAtEndOfPath(targetDir, oldFileName));
-        boolean isOldFileValid = verifyExistance(oldPath);
-        if (!isOldFileValid) {
-            throw new FileManagementException("Target file does not exist.");
-        }
-        Path newPath = getAbsolutePath(PathUtil.concatNameAtEndOfPath(targetDir, newFileName));
-        File oldFile = oldPath.toFile();
-        File newFile = newPath.toFile();
-        boolean successfullyRenamed = oldFile.renameTo(newFile);
-        if (!successfullyRenamed) {
-            throw new FileManagementException("Could not rename file.");
-        }
-    }
+    // /**
+    //  * Renames the file in the file system.
+    //  * 
+    //  * @param targetDir   The directory where the file can be found.
+    //  * @param oldFileName The old name of the file. Is used to find the file.
+    //  * @param newFileName The new name of the file.
+    //  * @throws FileManagementException When the old file can not be found in the
+    //  *                                 given directory. When the directory itself is
+    //  *                                 invalid. When the File.renameTo() method
+    //  *                                 could not rename the file.
+    //  */
+    // public void changeFileName(String targetDir, String oldFileName, String newFileName)
+    //         throws FileManagementException {
+    //     boolean isTargetDirValid = verifyExistance(targetDir);
+    //     if (!isTargetDirValid) {
+    //         throw new FileManagementException("Target directory does not exist.");
+    //     }
+    //     Path oldPath = getAbsolutePath(PathUtil.concatNameAtEndOfPath(targetDir, oldFileName));
+    //     boolean isOldFileValid = verifyExistance(oldPath);
+    //     if (!isOldFileValid) {
+    //         throw new FileManagementException("Target file does not exist.");
+    //     }
+    //     Path newPath = getAbsolutePath(PathUtil.concatNameAtEndOfPath(targetDir, newFileName));
+    //     File oldFile = oldPath.toFile();
+    //     File newFile = newPath.toFile();
+    //     boolean successfullyRenamed = oldFile.renameTo(newFile);
+    //     if (!successfullyRenamed) {
+    //         throw new FileManagementException("Could not rename file.");
+    //     }
+    // }
 
     /**
      * Cretes a Path object with absolute path, using the rootLocation (of the
