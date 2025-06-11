@@ -2,12 +2,10 @@ package server.filestorm.util;
 
 import java.util.Date;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import javax.crypto.SecretKey;
 
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import io.jsonwebtoken.Claims;
@@ -35,12 +33,12 @@ public class JwtUtil {
         return createToken(claims, username);
     }
 
-    @Async
-    public CompletableFuture<Boolean> validateToken(String token, String username) {
-        final String usernameToken = extractUsername(token);
-        final boolean isExpired = extractExparation(token).before(new Date());
-        return CompletableFuture.completedFuture(usernameToken.equals(username) && !isExpired);
-    }
+    // @Async
+    // public CompletableFuture<Boolean> validateToken(String token, String username) {
+    //     final String usernameToken = extractUsername(token);
+    //     final boolean isExpired = extractExparation(token).before(new Date());
+    //     return CompletableFuture.completedFuture(usernameToken.equals(username) && !isExpired);
+    // }
 
     private String createToken(Map<String, Object> claims, String username) {
         return Jwts.builder()
