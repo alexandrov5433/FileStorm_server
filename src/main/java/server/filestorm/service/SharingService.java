@@ -30,11 +30,10 @@ public class SharingService {
     private LinkGeneratorService linkGeneratorService;
 
     @Transactional
-    public Optional<ChunkReference> updateChunkShareOption(Chunk c, String shareOption) throws StorageException {
+    public void updateChunkShareOption(Chunk c, String shareOption) throws StorageException {
         ShareOption option = matchStringToShareOption(shareOption);
         c.setShareOption(option);
         chunkRepository.save(c);
-        return Optional.of(new ChunkReference(c));
     }
 
     private ShareOption matchStringToShareOption(String shareOption) throws StorageException {
@@ -51,12 +50,11 @@ public class SharingService {
      * @param c Chunk from which to delete.
      */
     @Transactional
-    public ChunkReference deleteShareWithAndShareLink(Chunk c) {
+    public void deleteShareWithAndShareLink(Chunk c) {
         // delete all Users from shred_with
         c.setShareWith(new HashSet<>());
         c.setShareLink(null);
         chunkRepository.save(c);
-        return new ChunkReference(c);
     }
 
     /**
@@ -64,18 +62,16 @@ public class SharingService {
      * for sharing in share_link.
      * 
      * @param c Chunk for processing.
-     * @return A ChunkReference of the processed Chunk.
      * @throws ProcessingException From
      *                             LinkGeneratorService.generateFileSharingLink(c.getId(),
      *                             c.getName()).
      */
     @Transactional
-    public ChunkReference deleteShareWithAndCreateShareLink(Chunk c) throws ProcessingException {
+    public void deleteShareWithAndCreateShareLink(Chunk c) throws ProcessingException {
         c.setShareWith(new HashSet<>());
         String link = this.linkGeneratorService.generateFileSharingLink(c.getId(), c.getName());
         c.setShareLink(link);
         chunkRepository.save(c);
-        return new ChunkReference(c);
     }
 
     /**
@@ -85,8 +81,8 @@ public class SharingService {
      * @return The Users - username and id - which are in the share_with field of
      *         the Chunk.
      */
-    public LinkedHashMap<String, Integer> getUsersFromShareWith(Chunk c) {
-        LinkedHashMap<String, Integer> users = new LinkedHashMap<String, Integer>();
+    public LinkedHashMap<String, Long> getUsersFromShareWith(Chunk c) {
+        LinkedHashMap<String, Long> users = new LinkedHashMap<String, Long>();
         Iterator<User> itr = c.getShareWith().iterator();
         while (itr.hasNext()) {
             User u = itr.next();
@@ -113,10 +109,9 @@ public class SharingService {
     }
 
     @Transactional
-    public Boolean shareFileWithUser(Chunk c, User userReceiver) {
+    public void shareFileWithUser(Chunk c, User userReceiver) {
         c.addUserToShareWithList(userReceiver);
         chunkRepository.save(c);
-        return true;
     }
 
     /**

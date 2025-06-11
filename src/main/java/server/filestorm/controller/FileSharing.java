@@ -8,7 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.context.request.async.DeferredResult;
 
@@ -37,10 +36,29 @@ public class FileSharing {
     @Autowired
     private SharingService sharingService;
 
-    @PostMapping("/api/file/share_with_user/{fileId}/{userIdReceiver}")
+    @GetMapping("/api/file-sharing/share_with")
+    public DeferredResult<ResponseEntity<ApiResponse<?>>> getShareWithForFileOfUser(
+            @RequestParam Long fileId,
+            CustomHttpServletRequestWrapper req) {
+        DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
+        CustomSession session = req.getCustomSession();
+
+        Long userId = session.getUserId();
+        User user = userService.findById(userId);
+        Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
+
+        LinkedHashMap<String, Long> users = sharingService.getUsersFromShareWith(chunk);
+
+        res.setResult(ResponseEntity.ok()
+                .body(new ApiResponse<LinkedHashMap<String, Long>>("Users with which the file is shared.", users)));
+
+        return res;
+    }
+
+    @PostMapping("/api/file-sharing/share_with")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> shareFileWithUser(
-            @PathVariable Integer fileId,
-            @PathVariable Integer userIdReceiver,
+            @RequestParam Long fileId,
+            @RequestParam Long userIdReceiver,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
@@ -50,7 +68,7 @@ public class FileSharing {
             throw new FileManagementException("FileId or userId is missing.");
         }
 
-        Integer userId = session.getUserId();
+        Long userId = session.getUserId();
         User user = userService.findById(userId);
         User userReceiver = userService.findById(userIdReceiver);
         Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
@@ -61,21 +79,18 @@ public class FileSharing {
                     "In order to share the file with another user, please change the sharing option to 'Share with user' first.");
         }
 
-        boolean isDone = sharingService.shareFileWithUser(chunk, userReceiver);
-        if (isDone) {
-            res.setResult(ResponseEntity.ok()
-                    .body(new ApiResponse<Boolean>("Shared with " + userReceiver.getUsername(), isDone)));
-        } else {
-            res.setResult(ResponseEntity.badRequest()
-                    .body(new ApiResponse<Boolean>("Could not share file with " + userReceiver.getUsername(), isDone)));
-        }
+        sharingService.shareFileWithUser(chunk, userReceiver);
+
+        res.setResult(ResponseEntity.ok()
+                .body(new ApiResponse<>("Shared with " + userReceiver.getUsername() + ".")));
+
         return res;
     }
 
-    @PatchMapping("/api/file/share_option/{fileId}/{newShareOption}")
+    @PatchMapping("/api/file-sharing/share_option")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> changeFileShareOptions(
-            @PathVariable Integer fileId,
-            @PathVariable String newShareOption,
+            @RequestParam Long fileId,
+            @RequestParam String newShareOption,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
@@ -86,31 +101,31 @@ public class FileSharing {
         }
         newShareOption = newShareOption.toUpperCase();
 
-        Integer userId = session.getUserId();
+        Long userId = session.getUserId();
         User user = userService.findById(userId);
         Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
 
         // update share option in chunk
-        ChunkReference updatedChunkRef = sharingService.updateChunkShareOption(chunk, newShareOption)
-                .orElseThrow(() -> new FileManagementException("Could not update share option."));
+        sharingService.updateChunkShareOption(chunk, newShareOption);
 
         // do extra work for the given option
         switch (newShareOption) {
             case "PRIVATE":
                 // remove all users from share_with
                 // delete share_link
-                updatedChunkRef = sharingService.deleteShareWithAndShareLink(chunk);
+                sharingService.deleteShareWithAndShareLink(chunk);
                 break;
             case "SHARE_WITH_USER":
             case "SHARE_WITH_ALL_WITH_LINK":
                 // remove all users from share_with
                 // create share_link
-                updatedChunkRef = sharingService.deleteShareWithAndCreateShareLink(chunk);
+                sharingService.deleteShareWithAndCreateShareLink(chunk);
                 break;
         }
 
         // return updated ChunkReference
-        res.setResult(ResponseEntity.ok().body(new ApiResponse<>("Share option updated.", updatedChunkRef)));
+        res.setResult(ResponseEntity.ok()
+                .body(new ApiResponse<ChunkReference>("Share option updated.", new ChunkReference(chunk))));
         return res;
     }
 
@@ -121,20 +136,20 @@ public class FileSharing {
         if (username == null) {
             throw new FileManagementException("Username missing.");
         }
-        LinkedHashMap<String, Integer> result = userService.queryUsersByName(username);
-        // HashMap<String, Integer> result = userService.queryUsersByName(userName);
+        LinkedHashMap<String, Long> result = userService.queryUsersByName(username);
 
-        res.setResult(ResponseEntity.ok().body(new ApiResponse<>("Queried users.", result)));
+        res.setResult(
+                ResponseEntity.ok().body(new ApiResponse<LinkedHashMap<String, Long>>("Queried users.", result)));
         return res;
     }
 
-    @GetMapping("/api/file/shared_with_me")
+    @GetMapping("/api/file-sharing/shared_with_me")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> getFilesSharedWithMe(
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
 
-        Integer userId = session.getUserId();
+        Long userId = session.getUserId();
         User user = userService.findById(userId);
 
         ArrayList<ChunkReference> chunkReferences = sharingService.getFilesSharedWithUser(user);
@@ -145,13 +160,13 @@ public class FileSharing {
         return res;
     }
 
-    @GetMapping("/api/file/me_sharing")
+    @GetMapping("/api/file-sharing/me_sharing")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> getAllFilesUserIsSharing(
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
 
-        Integer userId = session.getUserId();
+        Long userId = session.getUserId();
         User user = userService.findById(userId);
         ArrayList<ChunkReference> refs = sharingService.getFilesUserIsSharing(user);
 
@@ -160,22 +175,4 @@ public class FileSharing {
         return res;
     }
 
-    @GetMapping("/api/file/share_with/{fileId}")
-    public DeferredResult<ResponseEntity<ApiResponse<?>>> getShareWithForFileOfUser(
-            @PathVariable Integer fileId,
-            CustomHttpServletRequestWrapper req) {
-        DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
-        CustomSession session = req.getCustomSession();
-
-        Integer userId = session.getUserId();
-        User user = userService.findById(userId);
-        Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
-
-        LinkedHashMap<String, Integer> users = sharingService.getUsersFromShareWith(chunk);
-
-        res.setResult(ResponseEntity.ok()
-                .body(new ApiResponse<LinkedHashMap<String, Integer>>("Users with which the file is shared.", users)));
-
-        return res;
-    }
 }

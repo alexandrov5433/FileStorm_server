@@ -17,11 +17,11 @@ public class LinkGeneratorService {
         this.base_url = confProps.getBaseUrl();
     }
 
-    public String generateFileSharingLink(Integer fileId, String fileName) throws ProcessingException {
+    public String generateFileSharingLink(Long fileId, String fileName) throws ProcessingException {
         if (fileId == null || fileName == null || fileName.trim().length() == 0) {
             throw new ProcessingException("File ID and name are required for the sharing link.");
         }
-        return String.format("%1$s/api/file/download_shared_file/%2$d/%3$s",
+        return String.format("%1$s/api/download_shared_file/%2$d/%3$s",
             this.base_url, fileId, fileName);
     }
 }

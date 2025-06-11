@@ -366,14 +366,14 @@ public class UserService {
     //     return new ChunkReference(c);
     // }
 
-    public LinkedHashMap<String, Integer> queryUsersByName(String username) {
+    public LinkedHashMap<String, Long> queryUsersByName(String username) {
         // null-check username
         username = username == null ? "" : username;
 
         // escape username
         username = username.replaceAll("[^A-Za-z0-9_]", "");
 
-        LinkedHashMap<String, Integer> users = new LinkedHashMap<>();
+        LinkedHashMap<String, Long> users = new LinkedHashMap<>();
 
         // no need to query on empty string; return empty result
         if (username.equals(""))
@@ -381,7 +381,7 @@ public class UserService {
 
         userRepository.queryUsersByUsername(username).ifPresent(queryResult -> {
             for (Object[] el : queryResult) {
-                users.put((String) el[0], (Integer) el[1]);
+                users.put((String) el[0], (Long) el[1]);
             }
         });
         return users;
