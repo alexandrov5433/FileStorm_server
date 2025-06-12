@@ -52,8 +52,8 @@ public class ChunkService {
     //             .orElseThrow(() -> new FileManagementException("A file with this name was not found for this user."));
     // }
 
-    public Integer deleteChunkByIdAndOwner(Long chunkId, User owner) {
-        return chunkRepository.deleteChunkByIdAndOwner(chunkId, owner);
+    public void delete(Chunk chunk) {
+        chunkRepository.delete(chunk);
     }
 
     public ChunkReference[] getFavoritesForUser(User user) {

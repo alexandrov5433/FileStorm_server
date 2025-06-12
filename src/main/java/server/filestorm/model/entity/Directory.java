@@ -154,6 +154,10 @@ public class Directory {
         return createdOn;
     }
 
+    public void setLastModified(Long lastModified) {
+        this.lastModified = lastModified;
+    }
+
     public Long getLastModified() {
         return lastModified;
     }

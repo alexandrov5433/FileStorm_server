@@ -50,7 +50,7 @@ public class AuthService {
         user.setEmail(data.getEmail());
         user.setMaxStorageSpace(confProps.getAvailableStoragePerAccountBytes());
 
-        userService.saveNewUser(user);
+        userService.saveUser(user);
 
         return new AuthResult<User>(false, user);
     }

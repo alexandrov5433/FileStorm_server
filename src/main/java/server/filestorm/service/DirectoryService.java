@@ -19,6 +19,10 @@ public class DirectoryService {
     @Autowired
     private DirectoryRepository directoryRepository;
 
+    public Directory saveDirectory(Directory dir) {
+        return directoryRepository.save(dir);
+    }
+
     /**
      * Creates a new root directory for the new user in DB.
      * 

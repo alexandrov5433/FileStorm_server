@@ -111,17 +111,8 @@ public class FileSystem {
         // verify file existance and ownership in DB
         Chunk chunkForDeletion = chunkService.findChunkByIdAndOwner(fileId, user);
 
-        // delete chunk from FS
-        boolean isChunkDeleted = fileSystemService.deleteFile(chunkForDeletion);
-        if (!isChunkDeleted) {
-            throw new FileManagementException("Could not delete file: " + chunkForDeletion.getName());
-        }
-
-        // delete chunk from DB
-        Integer deletedChunkId = chunkService.deleteChunkByIdAndOwner(chunkForDeletion.getId(), user);
-        if (deletedChunkId == null) {
-            throw new FileManagementException("Could not delete file: " + chunkForDeletion.getName());
-        }
+        // delete chunk from DB and FS
+        fileSystemService.deleteFile(chunkForDeletion, user);
 
         res.setResult(ResponseEntity.ok()
                 .body(new ApiResponse<Long>("File deleted.", chunkForDeletion.getId())));
