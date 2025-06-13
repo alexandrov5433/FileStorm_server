@@ -67,24 +67,5 @@ public class PathUtil {
     //     ;
     // }
 
-    /**
-     * Sanitizes the given name and applies the String.trim() method. The following
-     * characters are removed: \/?":*><|
-     * 
-     * @param name String to sanitize.
-     * @return The sanitized and trimmed string.
-     * @throws ProcessingException When the name argument is null or it's length is 0. Also when length becomes 0 after sanitization.
-     */
-    public static String sanitizeFileName(String name) throws ProcessingException {
-        if (name == null || name.length() == 0) {
-            throw new ProcessingException("The name is missing.");
-        }
-        name = name
-                .replaceAll("\\\\|/|:|\\*|\\?|\"|<|>|\\|", "")
-                .trim();
-        if (name.length() == 0) {
-            throw new ProcessingException("The name is missing.");
-        }
-        return name;
-    }
+
 }

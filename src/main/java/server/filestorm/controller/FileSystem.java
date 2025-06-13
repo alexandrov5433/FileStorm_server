@@ -28,7 +28,7 @@ import server.filestorm.service.DirectoryService;
 import server.filestorm.service.FileSystemService;
 import server.filestorm.service.UserService;
 import server.filestorm.util.CustomHttpServletRequestWrapper;
-import server.filestorm.util.PathUtil;
+import server.filestorm.util.StringUtil;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -138,7 +138,7 @@ public class FileSystem {
         Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
 
         // sanitize and check newFileName
-        newFileName = PathUtil.sanitizeFileName(newFileName);
+        newFileName = StringUtil.sanitizeFileName(newFileName);
 
         chunk = chunkService.updateOriginalFileName(chunk, newFileName);
 
@@ -182,7 +182,7 @@ public class FileSystem {
         CustomSession session = req.getCustomSession();
 
         Long targetDirectoryId = data.getTargetDirectoryId();
-        String newDirName = PathUtil.sanitizeFileName(data.getNewDirectoryName());
+        String newDirName = StringUtil.sanitizeFileName(data.getNewDirectoryName());
 
         Long userId = session.getUserId();
         User user = userService.findById(userId);

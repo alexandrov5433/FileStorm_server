@@ -93,4 +93,19 @@ public class DirectoryService {
         return subdirectories;
     }
 
+    /**
+     * Checks if the directory already includes a chunk with this originalFileName.
+     * @param directory The directory in which the check is conducted.
+     * @param originalFileName The originalFileName, the availability of which must be checked.
+     * @return True if the directory includes a chunk with this originalFileName, false otherwise.
+     */
+    public Boolean doesDirectoryIncludeChunk(Directory directory, String originalFileName) {
+        List<Chunk> chunks = directory.getChunks();
+        for (Chunk c : chunks) {
+            if (c.getOriginalFileName().equals(originalFileName)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

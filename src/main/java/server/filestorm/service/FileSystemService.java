@@ -27,6 +27,7 @@ import server.filestorm.model.entity.Directory;
 import server.filestorm.model.entity.User;
 import server.filestorm.model.type.FileUploadData;
 import server.filestorm.util.PathUtil;
+import server.filestorm.util.StringUtil;
 
 @Service
 public class FileSystemService {
@@ -71,8 +72,13 @@ public class FileSystemService {
                 throw new StorageException("Failed to store empty file.");
             }
 
-            // check file name is valid
-            String originalFileName = PathUtil.sanitizeFileName(file.getOriginalFilename());
+            // check file name is valid and available
+            String originalFileName = StringUtil.sanitizeFileName(file.getOriginalFilename());
+            while (
+                directoryService.doesDirectoryIncludeChunk(targetDirectory, originalFileName)
+                ) {
+                originalFileName = StringUtil.appendUniqueCounter(originalFileName);
+            }
 
             // check directory existence
             boolean uploadDirExists = this.verifyExistance(Long.toString(user.getId()));
