@@ -339,9 +339,11 @@ public class FileSystemService {
             ArrayList<Chunk> chunks,
             User owner) {
         for (Directory d : directories) {
-            directoryService.deleteDirectoryForUserById(d.getId(), owner);
+            if (d.getOwner().getId() != owner.getId()) continue;
+            directoryService.delete(d);
         }
         for (Chunk c : chunks) {
+            if (c.getOwner().getId() != owner.getId()) continue;
             deleteFileFromFileSystem(c);
             chunkService.delete(c);
         }

@@ -55,8 +55,9 @@ public class DirectoryService {
         return directoryRepository.save(dir);
     }
 
-    public Integer deleteDirectoryForUserById(Long directoryId, User owner) {
-        return directoryRepository.deleteDirectoryForUserById(directoryId, owner);
+    @Transactional
+    public void delete(Directory directory) {
+        directoryRepository.delete(directory);
     }
 
     public Directory findDirectoryForUserById(Long directoryId, User owner) {
