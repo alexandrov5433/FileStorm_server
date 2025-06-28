@@ -2,6 +2,7 @@ package server.filestorm.model.type.authentication;
 
 import java.io.Serializable;
 
+import server.filestorm.model.entity.Directory;
 import server.filestorm.model.entity.User;
 
 public class UserReference implements Serializable {
@@ -10,6 +11,7 @@ public class UserReference implements Serializable {
     private String email;
     private Long maxStorageSpace;
     private Long bytesInStorage;
+    private Long rootStorageDir;
 
     public UserReference() {
         this.id = null;
@@ -17,6 +19,7 @@ public class UserReference implements Serializable {
         this.email = null;
         this.maxStorageSpace = null;
         this.bytesInStorage = null;
+        this.rootStorageDir = null;
     }
 
     public UserReference(User user) {
@@ -25,6 +28,7 @@ public class UserReference implements Serializable {
         this.email = user.getEmail();
         this.maxStorageSpace = user.getMaxStorageSpace();
         this.bytesInStorage = user.getBytesInStorage();
+        this.rootStorageDir = user.getRootStorageDir().getId();
     }
 
     public Long getId() {
@@ -65,5 +69,17 @@ public class UserReference implements Serializable {
 
     public void setBytesInStorage(Long bytesInStorage) {
         this.bytesInStorage = bytesInStorage;
+    }
+
+    public Long getRootStorageDir() {
+        return rootStorageDir;
+    }
+
+    public void setRootStorageDir(Long rootStorageDir) {
+        this.rootStorageDir = rootStorageDir;
+    }
+
+    public void setRootStorageDir(Directory rootStorageDir) {
+        this.rootStorageDir = rootStorageDir.getId();
     }
 }

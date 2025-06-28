@@ -3,10 +3,13 @@ package server.filestorm.model.entity;
 import java.util.Set;
 
 import jakarta.annotation.Nonnull;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import server.filestorm.exception.StorageException;
@@ -39,9 +42,9 @@ public class User {
     @ManyToMany(mappedBy = "shareWith")
     private Set<Chunk> chunksSharedWithMe;
 
-    // @JdbcTypeCode(SqlTypes.JSON)
-    // @Convert(converter = DirectoryReferenceConverter.class)
-    // private DirectoryReference storage_directory;
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "root_storage_dir", referencedColumnName = "id")
+    private Directory rootStorageDir; 
      
 
     @PrePersist
@@ -120,5 +123,13 @@ public class User {
 
     public Set<Chunk> getChunksSharedWithMe() {
         return chunksSharedWithMe;
+    }
+
+    public Directory getRootStorageDir() {
+        return rootStorageDir;
+    }
+
+    public void setRootStorageDir(Directory rootStorageDir) {
+        this.rootStorageDir = rootStorageDir;
     }
 }

@@ -15,10 +15,12 @@ import server.filestorm.model.type.authentication.AuthValidationResult;
 import server.filestorm.model.type.authentication.LoginData;
 import server.filestorm.model.type.authentication.RegistrationData;
 import server.filestorm.model.type.authentication.UserReference;
+import server.filestorm.model.entity.Directory;
 import server.filestorm.model.entity.User;
 import server.filestorm.service.AuthService;
 import server.filestorm.service.DirectoryService;
 import server.filestorm.service.FileSystemService;
+import server.filestorm.service.UserService;
 import server.filestorm.util.CustomHttpServletRequestWrapper;
 import server.filestorm.util.JwtUtil;
 
@@ -40,6 +42,9 @@ public class Authentication {
 
     @Autowired
     private DirectoryService directoryService;
+
+    @Autowired
+    private UserService userService;
 
     @PostMapping(path = "/api/auth/register")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> register(RegistrationData data) {
@@ -75,7 +80,8 @@ public class Authentication {
             }
 
             // add user storage dir to his DB reference
-            directoryService.createNewDirectory(rootUserDir.getName(), user);
+            Directory rootStorageDir = directoryService.createNewDirectory(rootUserDir.getName(), user);
+            userService.addRootStorageDirToUser(user, rootStorageDir);
 
             // responde 200 with cookie
             res.setResult(ResponseEntity.ok()
