@@ -8,13 +8,13 @@ import server.filestorm.exception.ProcessingException;
 
 @Service
 public class LinkGeneratorService {
-    private String base_url;
+    private String domain;
 
     public LinkGeneratorService(ServerConfigurationProperties confProps) {
-        if (confProps.getBaseUrl().trim().length() == 0) {
+        if (confProps.getDomain().trim().length() == 0) {
             throw new ConfigurationException("Base url must be a valid string.");
         }
-        this.base_url = confProps.getBaseUrl();
+        this.domain = confProps.getDomain();
     }
 
     public String generateFileSharingLink(Long fileId, String fileName) throws ProcessingException {
@@ -22,6 +22,6 @@ public class LinkGeneratorService {
             throw new ProcessingException("File ID and name are required for the sharing link.");
         }
         return String.format("%1$s/api/download_shared_file/%2$d/%3$s",
-            this.base_url, fileId, fileName);
+            this.domain, fileId, fileName);
     }
 }

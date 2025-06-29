@@ -6,18 +6,18 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties("filestorm-server-config")
 public class ServerConfigurationProperties {
-    private String base_url;
+    private String domain;
     private String file_storage_location;
     private String client_location;
     private String jwt_secret;
     private String available_storage_per_account_gb;
 
-    public String getBaseUrl() {
-        return base_url;
+    public String getDomain() {
+        return domain;
     }
 
-    public void setBaseUrl(String base_url) {
-        this.base_url = base_url;
+    public void setDomain(String domain) {
+        this.domain = domain;
     }
 
     public String getFileStorageLocation() {

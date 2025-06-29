@@ -10,9 +10,9 @@
     "description": "A description for 'filestorm-server-config.client_location'"
   },
   {
-    "name": "filestorm-server-config.base_url",
+    "name": "filestorm-server-config.domain",
     "type": "java.lang.String",
-    "description": "A description for 'filestorm-server-config.base_url'"
+    "description": "A description for 'filestorm-server-config.domain'"
   },
   {
     "name": "filestorm-server-config.jwt_secret",
