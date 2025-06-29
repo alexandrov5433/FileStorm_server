@@ -61,7 +61,7 @@ public class UserService {
                 .orElseThrow(() -> new AuthenticationException("User not found."));
     }
 
-    public LinkedHashMap<String, Long> queryUsersByName(String username) {
+    public LinkedHashMap<String, Long> queryUsersByName(String username, String usernameToExclude) {
         // null-check username
         username = username == null ? "" : username;
 
@@ -76,6 +76,9 @@ public class UserService {
 
         userRepository.queryUsersByUsername(username).ifPresent(queryResult -> {
             for (Object[] el : queryResult) {
+                if (el[0].equals(usernameToExclude)) {
+                    continue;
+                }
                 users.put((String) el[0], (Long) el[1]);
             }
         });
