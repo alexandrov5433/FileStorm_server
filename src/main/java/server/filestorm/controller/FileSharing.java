@@ -146,11 +146,11 @@ public class FileSharing {
         // do extra work for the given option
         switch (newShareOption) {
             case "PRIVATE":
+            case "SHARE_WITH_USER":
                 // remove all users from share_with
                 // delete share_link
                 sharingService.deleteShareWithAndShareLink(chunk);
                 break;
-            case "SHARE_WITH_USER":
             case "SHARE_WITH_ALL_WITH_LINK":
                 // remove all users from share_with
                 // create share_link
