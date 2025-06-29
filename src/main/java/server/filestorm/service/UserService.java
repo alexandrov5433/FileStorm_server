@@ -1,12 +1,15 @@
 package server.filestorm.service;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import server.filestorm.exception.AuthenticationException;
+import server.filestorm.model.entity.Chunk;
 import server.filestorm.model.entity.Directory;
 import server.filestorm.model.entity.User;
 import server.filestorm.model.repository.UserRepository;
@@ -61,7 +64,8 @@ public class UserService {
                 .orElseThrow(() -> new AuthenticationException("User not found."));
     }
 
-    public LinkedHashMap<String, Long> queryUsersByName(String username, String usernameToExclude) {
+    @Transactional
+    public LinkedHashMap<String, Long> queryUsersByNameForFileSharing(String username, String usernameToExclude, Chunk fileToShare) {
         // null-check username
         username = username == null ? "" : username;
 
@@ -70,13 +74,21 @@ public class UserService {
 
         LinkedHashMap<String, Long> users = new LinkedHashMap<>();
 
+        ArrayList<String> usernamesWithWhomTheFileIsShared = fileToShare.getShareWith().stream()
+            .map(User::getUsername)
+            .collect(Collectors.toCollection(ArrayList::new));
+
         // no need to query on empty string; return empty result
         if (username.equals(""))
             return users;
 
         userRepository.queryUsersByUsername(username).ifPresent(queryResult -> {
+            // queryResult is [{u.username, u.id}]
             for (Object[] el : queryResult) {
                 if (el[0].equals(usernameToExclude)) {
+                    continue;
+                }
+                if (usernamesWithWhomTheFileIsShared.indexOf(el[0]) != -1) {
                     continue;
                 }
                 users.put((String) el[0], (Long) el[1]);

@@ -167,6 +167,7 @@ public class FileSharing {
     @GetMapping("/api/users")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> queryUsersByName(
             @RequestParam String username,
+            @RequestParam Long fileIdToShare,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
         CustomSession session = req.getCustomSession();
@@ -174,8 +175,14 @@ public class FileSharing {
         if (username == null) {
             throw new FileManagementException("Username missing.");
         }
+
+        Long userId = session.getUserId();
+        User user = userService.findById(userId);
         String userRequesterToExcludeFromSearch = session.getUsername();
-        LinkedHashMap<String, Long> result = userService.queryUsersByName(username, userRequesterToExcludeFromSearch);
+
+        Chunk fileToShare = chunkService.findChunkByIdAndOwner(fileIdToShare, user);
+
+        LinkedHashMap<String, Long> result = userService.queryUsersByNameForFileSharing(username, userRequesterToExcludeFromSearch, fileToShare);
 
         res.setResult(
                 ResponseEntity.ok().body(new ApiResponse<LinkedHashMap<String, Long>>("Queried users.", result)));
