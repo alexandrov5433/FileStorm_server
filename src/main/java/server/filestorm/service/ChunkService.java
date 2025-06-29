@@ -75,4 +75,9 @@ public class ChunkService {
         c.setIsFavorite(false);
         chunkRepository.save(c);
     }
+
+    @Transactional
+    public boolean removeUserFromShareWith(Chunk c, User u) {
+        return c.getShareWith().remove(u);
+    }
 }
