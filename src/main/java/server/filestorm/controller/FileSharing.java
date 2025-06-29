@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -17,6 +18,7 @@ import server.filestorm.model.entity.User;
 import server.filestorm.model.entity.Chunk.ShareOption;
 import server.filestorm.model.type.ApiResponse;
 import server.filestorm.model.type.CustomSession;
+import server.filestorm.model.type.authentication.UserReference;
 import server.filestorm.model.type.fileManagement.ChunkReference;
 import server.filestorm.service.ChunkService;
 import server.filestorm.service.SharingService;
@@ -70,6 +72,12 @@ public class FileSharing {
 
         Long userId = session.getUserId();
         User user = userService.findById(userId);
+
+        // check if the user is trying to share the file with him self
+        if (userId == userIdReceiver) {
+            throw new FileManagementException("You can not share a file with your self.");
+        }
+
         User userReceiver = userService.findById(userIdReceiver);
         Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
 
@@ -82,7 +90,34 @@ public class FileSharing {
         sharingService.shareFileWithUser(chunk, userReceiver);
 
         res.setResult(ResponseEntity.ok()
-                .body(new ApiResponse<>("Shared with " + userReceiver.getUsername() + ".")));
+                .body(new ApiResponse<UserReference>("Shared with " + userReceiver.getUsername() + ".",
+                        new UserReference(userReceiver))));
+
+        return res;
+    }
+
+    @DeleteMapping("/api/file-sharing/share_with")
+    public DeferredResult<ResponseEntity<ApiResponse<?>>> removeUserFromShareWith(
+            @RequestParam Long fileId,
+            @RequestParam Long userIdReceiver,
+            CustomHttpServletRequestWrapper req) {
+        DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
+        CustomSession session = req.getCustomSession();
+
+        // check path vars existance
+        if (fileId == null || userIdReceiver == null) {
+            throw new FileManagementException("FileId or userId is missing.");
+        }
+
+        Long userId = session.getUserId();
+        User user = userService.findById(userId);
+        User userReceiver = userService.findById(userIdReceiver);
+        Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
+
+        chunkService.removeUserFromShareWith(chunk, userReceiver);
+
+        res.setResult(ResponseEntity.ok()
+                .body(new ApiResponse<>("User " + userReceiver.getUsername() + " was removed from the share list.")));
 
         return res;
     }
@@ -131,12 +166,16 @@ public class FileSharing {
 
     @GetMapping("/api/users")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> queryUsersByName(
-            @RequestParam String username) {
+            @RequestParam String username,
+            CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
+        CustomSession session = req.getCustomSession();
+
         if (username == null) {
             throw new FileManagementException("Username missing.");
         }
-        LinkedHashMap<String, Long> result = userService.queryUsersByName(username);
+        String userRequesterToExcludeFromSearch = session.getUsername();
+        LinkedHashMap<String, Long> result = userService.queryUsersByName(username, userRequesterToExcludeFromSearch);
 
         res.setResult(
                 ResponseEntity.ok().body(new ApiResponse<LinkedHashMap<String, Long>>("Queried users.", result)));
