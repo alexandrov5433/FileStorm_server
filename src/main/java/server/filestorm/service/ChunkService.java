@@ -47,11 +47,6 @@ public class ChunkService {
         return chunkRepository.save(chunk);
     }
 
-    // public Chunk findChunkByNameAndOwner(String name, User owner) {
-    //     return chunkRepository.findChunkByNameAndOwner(name, owner)
-    //             .orElseThrow(() -> new FileManagementException("A file with this name was not found for this user."));
-    // }
-
     public void delete(Chunk chunk) {
         chunkRepository.delete(chunk);
     }
@@ -79,5 +74,15 @@ public class ChunkService {
     @Transactional
     public boolean removeUserFromShareWith(Chunk c, User u) {
         return c.getShareWith().remove(u);
+    }
+
+    public Chunk findChunkSharedWithUser(Long chunkId, User u) {
+        Chunk chunk = chunkRepository.findById(chunkId)
+            .orElseThrow(() -> new FileManagementException("File not found."));
+        boolean isChunkSharedWithUser = chunk.getShareWith().contains(u);
+        if (!isChunkSharedWithUser) {
+            new FileManagementException("This file is not shared with you.");
+        }
+        return chunk;
     }
 }

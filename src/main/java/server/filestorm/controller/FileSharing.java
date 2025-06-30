@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,6 +22,7 @@ import server.filestorm.model.type.CustomSession;
 import server.filestorm.model.type.authentication.UserReference;
 import server.filestorm.model.type.fileManagement.ChunkReference;
 import server.filestorm.service.ChunkService;
+import server.filestorm.service.FileSystemService;
 import server.filestorm.service.SharingService;
 import server.filestorm.service.UserService;
 import server.filestorm.util.CustomHttpServletRequestWrapper;
@@ -37,6 +39,9 @@ public class FileSharing {
 
     @Autowired
     private SharingService sharingService;
+
+    @Autowired
+    private FileSystemService fileSystemService;
 
     @GetMapping("/api/file-sharing/share_with")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> getShareWithForFileOfUser(
@@ -221,4 +226,21 @@ public class FileSharing {
         return res;
     }
 
+    @GetMapping("/api/file-sharing/file")
+    public DeferredResult<ResponseEntity<?>> downloadFile(
+            @RequestParam Long fileId,
+            CustomHttpServletRequestWrapper req) {
+        DeferredResult<ResponseEntity<?>> res = new DeferredResult<>();
+        CustomSession session = req.getCustomSession();
+
+        Long userId = session.getUserId();
+        User user = userService.findById(userId);
+        Chunk sharedChunk = chunkService.findChunkSharedWithUser(fileId, user);
+
+        Resource file = fileSystemService.loadAsResource(sharedChunk);
+        res.setResult(ResponseEntity.ok()
+                .header("Content-Type", sharedChunk.getMimeType())
+                .body(file));
+        return res;
+    }
 }
