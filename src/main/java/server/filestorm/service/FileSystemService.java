@@ -1,6 +1,9 @@
 package server.filestorm.service;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.MalformedURLException;
@@ -10,7 +13,10 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
+import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
@@ -74,9 +80,7 @@ public class FileSystemService {
 
             // check file name is valid and available
             String originalFileName = StringUtil.sanitizeFileName(file.getOriginalFilename());
-            while (
-                directoryService.doesDirectoryIncludeChunk(targetDirectory, originalFileName)
-                ) {
+            while (directoryService.doesDirectoryIncludeChunk(targetDirectory, originalFileName)) {
                 originalFileName = StringUtil.appendUniqueCounter(originalFileName);
             }
 
@@ -233,18 +237,6 @@ public class FileSystemService {
         }
     }
 
-    // public void deleteAll() {
-    // FileSystemUtils.deleteRecursively(this.rootLocation.toFile());
-    // }
-
-    // public void init() {
-    // try {
-    // Files.createDirectories(rootLocation);
-    // } catch (IOException e) {
-    // throw new StorageException("Could not initialize storage directory.", e);
-    // }
-    // }
-
     /**
      * Creates a new derectory in the root storage directory of the server
      * (rootLocation). Returns the File object of the newly created directory.
@@ -274,58 +266,6 @@ public class FileSystemService {
         return newDir;
     }
 
-    // /**
-    // * Creates a new subdirectory in the user-specific storage derectory.
-    // *
-    // * @param subDirectoryPath The path to the directory in which the new
-    // * subdirectory must be placed. This path is relative to
-    // * the rootStorage directory of the server. It must
-    // * start with the user´s root storage directory. E.g.
-    // * "/11/firstSubdirectory/targetSubDirectory". 11 is the
-    // * user´s root storage directory.
-    // * @param newDirectoryName The name of the new subdirectory - e.g. "new_docs",
-    // * which will produce
-    // * "/11/firstSubdirectory/targetSubDirectory/new_docs".
-    // * @throws FileManagementException When subDirectoryPath does not exist, is
-    // not
-    // * readable or writable, or when the new
-    // * directory could not be created with
-    // * File.mkdir().
-    // * @throws ProcessingException
-    // */
-    // public DirectoryReference createSubDirectoryForUser(String subDirectoryPath,
-    // String newDirectoryName)
-    // throws FileManagementException, ProcessingException {
-    // // sanitize new name
-    // newDirectoryName = PathUtil.sanitizeFileName(newDirectoryName);
-    // if (newDirectoryName.length() == 0 || newDirectoryName == null) {
-    // throw new FileManagementException("This directory name is invalid.");
-    // }
-    // // check sub dir and new dir existance
-    // boolean subDirExists = this.verifyExistance(subDirectoryPath);
-    // if (!subDirExists) {
-    // throw new FileManagementException("The targeted subdirectory does not exist:
-    // " + subDirectoryPath);
-    // }
-    // boolean newDirExistsInSubDir = this.verifyExistance(
-    // PathUtil.concatNameAtEndOfPath(subDirectoryPath, newDirectoryName));
-    // if (newDirExistsInSubDir) {
-    // throw new FileManagementException(
-    // "This directory already includes a directory with this name: " +
-    // newDirectoryName);
-    // }
-
-    // File newDir = this.getAbsolutePath(
-    // PathUtil.concatNameAtEndOfPath(subDirectoryPath, newDirectoryName)).toFile();
-    // boolean isDirectoryCreated = newDir.mkdir();
-    // if (!isDirectoryCreated) {
-    // throw new FileManagementException("Could not create the new derectory: " +
-    // newDirectoryName);
-    // }
-
-    // return new DirectoryReference(newDirectoryName);
-    // }
-
     /**
      * Deletes all given directories from DB and then all chunks from FS and DB.
      * 
@@ -339,11 +279,13 @@ public class FileSystemService {
             ArrayList<Chunk> chunks,
             User owner) {
         for (Directory d : directories) {
-            if (d.getOwner().getId() != owner.getId()) continue;
+            if (d.getOwner().getId() != owner.getId())
+                continue;
             directoryService.delete(d);
         }
         for (Chunk c : chunks) {
-            if (c.getOwner().getId() != owner.getId()) continue;
+            if (c.getOwner().getId() != owner.getId())
+                continue;
             deleteFileFromFileSystem(c);
             chunkService.delete(c);
         }
@@ -379,82 +321,6 @@ public class FileSystemService {
             throw new FileManagementException("A problem occured while deleting: " + chunk.getName());
         }
     }
-
-    /**
-     * Deletes the directory of this path and everything in it.
-     * 
-     * @param targetDirectoryPath The directory which is to be deleted.
-     * @return True if the directory was successfully deleted and false otherwise.
-     * @throws FileManagementException When the FileSystemService.verifyExistance()
-     *                                 returns false or when an unexpected Exception
-     *                                 occurs.
-     */
-    // public Boolean deleteUserDirectory(String targetDirectoryPath)
-    // throws FileManagementException {
-    // try {
-    // boolean isValid = verifyExistance(targetDirectoryPath);
-    // if (!isValid) {
-    // throw new FileManagementException("Directory path is invalid: " +
-    // targetDirectoryPath);
-    // }
-    // File targetDir = this.getAbsolutePath(targetDirectoryPath).toFile();
-    // return this.deleteFile(targetDir);
-    // } catch (Exception e) {
-    // throw new FileManagementException("A problem occured while deleting: " +
-    // targetDirectoryPath);
-    // }
-    // }
-
-    /**
-     * Deletes the target directory (or file), the contents of the target directory
-     * and all of
-     * it´s subdirectories and their contents recursively.
-     * 
-     * @param targetDir The directory which is to be deleted.
-     */
-    // private Boolean deleteFile(File targetDir) {
-    // File[] contents = targetDir.listFiles();
-    // if (contents != null) {
-    // for (File file : contents) {
-    // this.deleteFile(file);
-    // }
-    // }
-    // return targetDir.delete();
-    // }
-
-    // /**
-    // * Renames the file in the file system.
-    // *
-    // * @param targetDir The directory where the file can be found.
-    // * @param oldFileName The old name of the file. Is used to find the file.
-    // * @param newFileName The new name of the file.
-    // * @throws FileManagementException When the old file can not be found in the
-    // * given directory. When the directory itself is
-    // * invalid. When the File.renameTo() method
-    // * could not rename the file.
-    // */
-    // public void changeFileName(String targetDir, String oldFileName, String
-    // newFileName)
-    // throws FileManagementException {
-    // boolean isTargetDirValid = verifyExistance(targetDir);
-    // if (!isTargetDirValid) {
-    // throw new FileManagementException("Target directory does not exist.");
-    // }
-    // Path oldPath = getAbsolutePath(PathUtil.concatNameAtEndOfPath(targetDir,
-    // oldFileName));
-    // boolean isOldFileValid = verifyExistance(oldPath);
-    // if (!isOldFileValid) {
-    // throw new FileManagementException("Target file does not exist.");
-    // }
-    // Path newPath = getAbsolutePath(PathUtil.concatNameAtEndOfPath(targetDir,
-    // newFileName));
-    // File oldFile = oldPath.toFile();
-    // File newFile = newPath.toFile();
-    // boolean successfullyRenamed = oldFile.renameTo(newFile);
-    // if (!successfullyRenamed) {
-    // throw new FileManagementException("Could not rename file.");
-    // }
-    // }
 
     /**
      * Cretes a Path object with absolute path, using the rootLocation (of the
@@ -520,5 +386,61 @@ public class FileSystemService {
     public Boolean verifyExistance(Path path) {
         File file = path.toFile();
         return (file.exists() && file.canRead() && file.canWrite());
+    }
+
+    private void zipChunks(ZipOutputStream zipOutputStream, Chunk[] chunks, String containingDirPathInZip) {
+        for (Chunk chunk : chunks) {
+            File file = getAbsolutePath(chunk).toFile();
+            try (FileInputStream fileInputStream = new FileInputStream(file)) {
+                zipOutputStream.putNextEntry(new ZipEntry(
+                    (containingDirPathInZip == null ? "" : containingDirPathInZip) + chunk.getOriginalFileName()
+                ));
+
+                // copy and copyLarge method from Apache Tomcat for coping data from one stream
+                // to another
+                boolean isChunkSizeOverTwoGB = chunk.getSizeBytes() >= Long.valueOf("2147483648") ? true : false;
+                if (isChunkSizeOverTwoGB) {
+                    IOUtils.copyLarge(fileInputStream, zipOutputStream);
+                } else {
+                    IOUtils.copy(fileInputStream, zipOutputStream);
+                }
+
+                zipOutputStream.closeEntry();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                continue;
+            }
+        }
+    }
+
+    private void zipDirectory(ZipOutputStream zipOutputStream, Directory directory, String containingDirPathInZip) {
+        try {
+            // cteate new empty directory in the zip file
+            String dirPathInZip = (containingDirPathInZip == null ? "" : containingDirPathInZip) + directory.getName() + "/";
+            zipOutputStream.putNextEntry(new ZipEntry(dirPathInZip));
+            zipOutputStream.closeEntry();
+
+            Chunk[] chunks = directory.getChunks().toArray(new Chunk[0]);
+            zipChunks(zipOutputStream, chunks, dirPathInZip);
+
+            Directory[] subdirectories = directory.getSubdirectories().toArray(new Directory[0]);
+            for (Directory subdirectory : subdirectories) {
+                zipDirectory(zipOutputStream, subdirectory, dirPathInZip);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void zipEtities(ZipOutputStream zipOutputStream, Chunk[] chunks, Directory[] directories) {
+        if (chunks != null) {
+            zipChunks(zipOutputStream, chunks, null);
+        }
+        if (directories != null) {
+            for (Directory directory : directories) {
+                zipDirectory(zipOutputStream, directory, null);
+            }
+        }
     }
 }

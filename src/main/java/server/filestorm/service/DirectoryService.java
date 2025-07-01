@@ -26,8 +26,8 @@ public class DirectoryService {
     /**
      * Creates a new root directory for the new user in DB.
      * 
-     * @param name             The name of the new root directory.
-     * @param owner            The user owner of the root directory.
+     * @param name  The name of the new root directory.
+     * @param owner The user owner of the root directory.
      * @return The newly created directory.
      */
     @Transactional
@@ -42,8 +42,8 @@ public class DirectoryService {
     /**
      * Creates a new directory (subdirectory) for the user in DB.
      * 
-     * @param name             The name of the new directory.
-     * @param owner            The user owner of the directory.
+     * @param name  The name of the new directory.
+     * @param owner The user owner of the directory.
      * @return The newly created directory.
      */
     @Transactional
@@ -60,13 +60,27 @@ public class DirectoryService {
         directoryRepository.delete(directory);
     }
 
-    public Directory findDirectoryForUserById(Long directoryId, User owner) {
+    public Directory findDirectoryForUserById(Long directoryId, User owner) throws StorageException {
         return directoryRepository.findDirectoryForUserById(directoryId, owner)
-            .orElseThrow(() -> new StorageException("Directory could not be found."));
+                .orElseThrow(() -> new StorageException("Directory could not be found."));
+    }
+
+    public Directory[] bulkCheckDirectoryOwnershipAndCollect(Long[] directoryIds, User owner) throws StorageException {
+        if (directoryIds == null) {
+            return new Directory[0];
+        }
+
+        ArrayList<Directory> directories = new ArrayList<Directory>();
+        for (long directoryId : directoryIds) {
+            directories.add(findDirectoryForUserById(directoryId, owner));
+        }
+        return directories.toArray(new Directory[0]);
     }
 
     /**
-     * Collects all chunks from the given directory, it´s subdirectories and all other subdirectories down the directory tree.
+     * Collects all chunks from the given directory, it´s subdirectories and all
+     * other subdirectories down the directory tree.
+     * 
      * @param dir The directory from which the chunk collection must start.
      * @return All collected chunks.
      */
@@ -81,8 +95,12 @@ public class DirectoryService {
     }
 
     /**
-     * Collects all subdirectories form the given directory and from all directories found down the directory tree. The initially given (first) directory IS NOT included in the final result.
-     * @param dir The initial (first) directory, from which the collection must start. 
+     * Collects all subdirectories form the given directory and from all directories
+     * found down the directory tree. The initially given (first) directory IS NOT
+     * included in the final result.
+     * 
+     * @param dir The initial (first) directory, from which the collection must
+     *            start.
      * @return All collected directories.
      */
     public ArrayList<Directory> extractDirectoriesFromDirAndSubDirs(Directory dir) {
@@ -96,9 +114,12 @@ public class DirectoryService {
 
     /**
      * Checks if the directory already includes a chunk with this originalFileName.
-     * @param directory The directory in which the check is conducted.
-     * @param originalFileName The originalFileName, the availability of which must be checked.
-     * @return True if the directory includes a chunk with this originalFileName, false otherwise.
+     * 
+     * @param directory        The directory in which the check is conducted.
+     * @param originalFileName The originalFileName, the availability of which must
+     *                         be checked.
+     * @return True if the directory includes a chunk with this originalFileName,
+     *         false otherwise.
      */
     public Boolean doesDirectoryIncludeChunk(Directory directory, String originalFileName) {
         List<Chunk> chunks = directory.getChunks();

@@ -1,6 +1,7 @@
 package server.filestorm.controller;
 
 import java.util.ArrayList;
+import java.util.zip.ZipOutputStream;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -9,14 +10,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.context.request.async.DeferredResult;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import server.filestorm.exception.FileManagementException;
 import server.filestorm.model.entity.Chunk;
 import server.filestorm.model.entity.Directory;
 import server.filestorm.model.entity.User;
 import server.filestorm.model.type.ApiResponse;
+import server.filestorm.model.type.BulkDownloadData;
 import server.filestorm.model.type.CustomSession;
 import server.filestorm.model.type.FileUploadData;
 import server.filestorm.model.type.fileManagement.ChunkReference;
@@ -153,6 +157,32 @@ public class FileSystem {
         return res;
     }
 
+    @PostMapping(path = "/api/file/bulk", consumes = "application/json", produces = "application/zip")
+    public ResponseEntity<StreamingResponseBody> bulkDownloadFiles(
+            @RequestBody BulkDownloadData buldDownloadData,
+            CustomHttpServletRequestWrapper req) {
+        CustomSession session = req.getCustomSession();
+        Long userId = session.getUserId();
+        User user = userService.findById(userId);
+
+        Long[] chunkIds = buldDownloadData.getChunks();
+        Long[] directoryIds = buldDownloadData.getDirectories();
+
+        Chunk[] chunks = chunkService.bulkCheckChunkOwnershipAndCollect(chunkIds, user);
+        Directory[] directories = directoryService.bulkCheckDirectoryOwnershipAndCollect(directoryIds, user);
+
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=\"FileStorm.zip\"")
+                .body(out -> {
+                    try (ZipOutputStream zipOutputStream = new ZipOutputStream(out)) {
+                        fileSystemService.zipEtities(zipOutputStream, chunks, directories);
+                        zipOutputStream.finish();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                });
+    }
+
     @GetMapping("/api/directory/{directoryId}")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> getDirectoryData(
             @PathVariable Long directoryId,
@@ -199,9 +229,9 @@ public class FileSystem {
         // create new dir
         Directory newDirectory = directoryService.createNewDirectory(newDirName, user, parentDirectory);
 
-
         res.setResult(ResponseEntity.ok()
-                .body(new ApiResponse<DirectoryReference>("New directory created.", new DirectoryReference(newDirectory))));
+                .body(new ApiResponse<DirectoryReference>("New directory created.",
+                        new DirectoryReference(newDirectory))));
         return res;
     }
 
@@ -224,14 +254,15 @@ public class FileSystem {
 
         // collect everything for deletion
         ArrayList<Chunk> chunksForDeletion = directoryService.extractChunksFromDirAndSubDirs(targetDirectory);
-        ArrayList<Directory> directoriesForDeletion = directoryService.extractDirectoriesFromDirAndSubDirs(targetDirectory);
+        ArrayList<Directory> directoriesForDeletion = directoryService
+                .extractDirectoriesFromDirAndSubDirs(targetDirectory);
         directoriesForDeletion.add(targetDirectory);
 
         // delete files form FS and DB and directories from DB
         fileSystemService.deleteDirectoryAndFiles(directoriesForDeletion, chunksForDeletion, user);
 
         res.setResult(ResponseEntity.ok()
-                .body(new ApiResponse<Long>("Directory deleted.", directoryId )));
+                .body(new ApiResponse<Long>("Directory deleted.", directoryId)));
         return res;
     }
 }

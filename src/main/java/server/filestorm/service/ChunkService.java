@@ -1,5 +1,7 @@
 package server.filestorm.service;
 
+import java.util.ArrayList;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +43,18 @@ public class ChunkService {
                 .orElseThrow(() -> new FileManagementException("A file with this ID was not found for this user."));
     }
 
+    public Chunk[] bulkCheckChunkOwnershipAndCollect(Long[] chunkIds, User owner) throws FileManagementException {
+        if (chunkIds == null) {
+            return new Chunk[0];
+        }
+
+        ArrayList<Chunk> chunks = new ArrayList<Chunk>();
+        for (long chunkId : chunkIds) {
+            chunks.add(findChunkByIdAndOwner(chunkId, owner));
+        }
+        return chunks.toArray(new Chunk[0]);
+    }
+
     @Transactional
     public Chunk updateOriginalFileName(Chunk chunk, String newName) {
         chunk.setOriginalFileName(newName);
@@ -64,7 +78,7 @@ public class ChunkService {
         c.setIsFavorite(true);
         chunkRepository.save(c);
     }
-    
+
     @Transactional
     public void removeChunkFromFavorite(Chunk c) {
         c.setIsFavorite(false);
@@ -78,7 +92,7 @@ public class ChunkService {
 
     public Chunk findChunkSharedWithUser(Long chunkId, User u) {
         Chunk chunk = chunkRepository.findById(chunkId)
-            .orElseThrow(() -> new FileManagementException("File not found."));
+                .orElseThrow(() -> new FileManagementException("File not found."));
         boolean isChunkSharedWithUser = chunk.getShareWith().contains(u);
         if (!isChunkSharedWithUser) {
             new FileManagementException("This file is not shared with you.");
