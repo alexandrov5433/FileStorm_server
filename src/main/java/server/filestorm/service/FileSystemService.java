@@ -272,7 +272,7 @@ public class FileSystemService {
      * @param owner       The user owner of the directories and chunks.
      */
     @Transactional
-    public void deleteDirectoryAndFiles(
+    public void deleteDirectoriesAndFiles(
             ArrayList<Directory> directories,
             ArrayList<Chunk> chunks,
             User owner) {
