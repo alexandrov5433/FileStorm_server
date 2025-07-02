@@ -277,14 +277,17 @@ public class FileSystemService {
             ArrayList<Chunk> chunks,
             User owner) {
         for (Directory d : directories) {
-            if (d.getOwner().getId() != owner.getId())
+            if (d.getOwner().getId() != owner.getId()) {
                 continue;
+            }
             directoryService.delete(d);
         }
         for (Chunk c : chunks) {
-            if (c.getOwner().getId() != owner.getId())
+            if (c.getOwner().getId() != owner.getId()) {
                 continue;
+            }
             deleteFileFromFileSystem(c);
+            owner.removeBytesInStorage(c.getSizeBytes());
             chunkService.delete(c);
         }
     }
@@ -391,8 +394,7 @@ public class FileSystemService {
             File file = getAbsolutePath(chunk).toFile();
             try (FileInputStream fileInputStream = new FileInputStream(file)) {
                 zipOutputStream.putNextEntry(new ZipEntry(
-                    (containingDirPathInZip == null ? "" : containingDirPathInZip) + chunk.getOriginalFileName()
-                ));
+                        (containingDirPathInZip == null ? "" : containingDirPathInZip) + chunk.getOriginalFileName()));
 
                 // copy and copyLarge method from Apache Tomcat for coping data from one stream
                 // to another
@@ -415,7 +417,8 @@ public class FileSystemService {
     private void zipDirectory(ZipOutputStream zipOutputStream, Directory directory, String containingDirPathInZip) {
         try {
             // cteate new empty directory in the zip file
-            String dirPathInZip = (containingDirPathInZip == null ? "" : containingDirPathInZip) + directory.getName() + "/";
+            String dirPathInZip = (containingDirPathInZip == null ? "" : containingDirPathInZip) + directory.getName()
+                    + "/";
             zipOutputStream.putNextEntry(new ZipEntry(dirPathInZip));
             zipOutputStream.closeEntry();
 
