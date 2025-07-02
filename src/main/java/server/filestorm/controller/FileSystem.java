@@ -63,17 +63,23 @@ public class FileSystem {
             @PathVariable Long fileId,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<?>> res = new DeferredResult<>();
-        CustomSession session = req.getCustomSession();
 
-        Long userId = session.getUserId();
-        User user = userService.findById(userId);
-        Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
+        Runnable process = () -> {
+            CustomSession session = req.getCustomSession();
+    
+            Long userId = session.getUserId();
+            User user = userService.findById(userId);
+            Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
+    
+            // return file
+            Resource file = fileSystemService.loadAsResource(chunk);
+            res.setResult(ResponseEntity.ok()
+                    .header("Content-Type", chunk.getMimeType())
+                    .body(file));
+        };
 
-        // return file
-        Resource file = fileSystemService.loadAsResource(chunk);
-        res.setResult(ResponseEntity.ok()
-                .header("Content-Type", chunk.getMimeType())
-                .body(file));
+        threadExecutorService.execute(process);
+        
         return res;
     }
 
@@ -82,28 +88,34 @@ public class FileSystem {
             FileUploadData fileUploadData,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
-        CustomSession session = req.getCustomSession();
 
-        Long userId = session.getUserId();
-        User user = userService.findById(userId);
+        Runnable process = () -> {
+            CustomSession session = req.getCustomSession();
+    
+            Long userId = session.getUserId();
+            User user = userService.findById(userId);
+    
+            Long targetDirectoryId = fileUploadData.getTargetDirectoryId();
+            // check upload dir and entry in DB
+            Directory directory = directoryService.findDirectoryForUserById(targetDirectoryId, user);
+    
+            // check storage space availability
+            Long fileSize = fileUploadData.getFile().getSize();
+            if (user.getMaxStorageSpace() - user.getBytesInStorage() < fileSize) {
+                throw new FileManagementException("Not enough free storage space for this file.");
+            }
+    
+            // save file is FS and DB
+            Chunk chunk = fileSystemService.store(fileUploadData, user, directory);
+    
+            ChunkReference chunkRef = new ChunkReference(chunk);
+    
+            res.setResult(ResponseEntity.ok()
+                    .body(new ApiResponse<ChunkReference>("File saved.", chunkRef)));
+        };
 
-        Long targetDirectoryId = fileUploadData.getTargetDirectoryId();
-        // check upload dir and entry in DB
-        Directory directory = directoryService.findDirectoryForUserById(targetDirectoryId, user);
+        threadExecutorService.execute(process);
 
-        // check storage space availability
-        Long fileSize = fileUploadData.getFile().getSize();
-        if (user.getMaxStorageSpace() - user.getBytesInStorage() < fileSize) {
-            throw new FileManagementException("Not enough free storage space for this file.");
-        }
-
-        // save file is FS and DB
-        Chunk chunk = fileSystemService.store(fileUploadData, user, directory);
-
-        ChunkReference chunkRef = new ChunkReference(chunk);
-
-        res.setResult(ResponseEntity.ok()
-                .body(new ApiResponse<ChunkReference>("File saved.", chunkRef)));
         return res;
     }
 
@@ -112,19 +124,24 @@ public class FileSystem {
             @PathVariable Long fileId,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
-        CustomSession session = req.getCustomSession();
 
-        Long userId = session.getUserId();
-        User user = userService.findById(userId);
+        Runnable process = () -> {
+            CustomSession session = req.getCustomSession();
+    
+            Long userId = session.getUserId();
+            User user = userService.findById(userId);
+    
+            // verify file existance and ownership in DB
+            Chunk chunkForDeletion = chunkService.findChunkByIdAndOwner(fileId, user);
+    
+            // delete chunk from DB and FS
+            fileSystemService.deleteFile(chunkForDeletion, user);
+    
+            res.setResult(ResponseEntity.ok()
+                    .body(new ApiResponse<Long>("File deleted.", chunkForDeletion.getId())));
+        };
 
-        // verify file existance and ownership in DB
-        Chunk chunkForDeletion = chunkService.findChunkByIdAndOwner(fileId, user);
-
-        // delete chunk from DB and FS
-        fileSystemService.deleteFile(chunkForDeletion, user);
-
-        res.setResult(ResponseEntity.ok()
-                .body(new ApiResponse<Long>("File deleted.", chunkForDeletion.getId())));
+        threadExecutorService.execute(process);
 
         return res;
     }
@@ -135,30 +152,36 @@ public class FileSystem {
             @RequestParam String newFileName,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
-        CustomSession session = req.getCustomSession();
 
-        Long userId = session.getUserId();
-        User user = userService.findById(userId);
+        Runnable process = () -> {
+            CustomSession session = req.getCustomSession();
+    
+            Long userId = session.getUserId();
+            User user = userService.findById(userId);
+    
+            // check file existance and ownership
+            if (fileId == null) {
+                throw new FileManagementException("File ID is required.");
+            }
+            Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
+    
+            // sanitize and check newFileName
+            String sanitizedFileName = StringUtil.sanitizeFileName(newFileName);
+            
+            chunk = chunkService.updateOriginalFileName(chunk, sanitizedFileName);
+    
+            // chage chunk name in DB
+            if (chunk == null) {
+                throw new FileManagementException("Could not change the name.");
+            }
+    
+            // return ChunkReference
+            res.setResult(ResponseEntity.ok()
+                    .body(new ApiResponse<ChunkReference>("Name changed.", new ChunkReference(chunk))));
+        };
 
-        // check file existance and ownership
-        if (fileId == null) {
-            throw new FileManagementException("File ID is required.");
-        }
-        Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
+        threadExecutorService.execute(process);
 
-        // sanitize and check newFileName
-        newFileName = StringUtil.sanitizeFileName(newFileName);
-
-        chunk = chunkService.updateOriginalFileName(chunk, newFileName);
-
-        // chage chunk name in DB
-        if (chunk == null) {
-            throw new FileManagementException("Could not change the name.");
-        }
-
-        // return ChunkReference
-        res.setResult(ResponseEntity.ok()
-                .body(new ApiResponse<ChunkReference>("Name changed.", new ChunkReference(chunk))));
         return res;
     }
 
@@ -228,19 +251,25 @@ public class FileSystem {
             @PathVariable Long directoryId,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
-        CustomSession session = req.getCustomSession();
 
-        Long userId = session.getUserId();
-        User user = userService.findById(userId);
+        Runnable process = () -> {
+            CustomSession session = req.getCustomSession();
+    
+            Long userId = session.getUserId();
+            User user = userService.findById(userId);
+    
+            // check target dir (sub dir)
+            Directory directory = directoryService.findDirectoryForUserById(directoryId, user);
+    
+            // return directory data
+            HydratedDirectoryReference hydratedDirectory = new HydratedDirectoryReference(directory);
+    
+            res.setResult(ResponseEntity.ok()
+                    .body(new ApiResponse<HydratedDirectoryReference>("Serving directory data.", hydratedDirectory)));
+        };
 
-        // check target dir (sub dir)
-        Directory directory = directoryService.findDirectoryForUserById(directoryId, user);
+        threadExecutorService.execute(process);
 
-        // return directory data
-        HydratedDirectoryReference hydratedDirectory = new HydratedDirectoryReference(directory);
-
-        res.setResult(ResponseEntity.ok()
-                .body(new ApiResponse<HydratedDirectoryReference>("Serving directory data.", hydratedDirectory)));
         return res;
     }
 
@@ -249,29 +278,35 @@ public class FileSystem {
             DirectoryCreationData data,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
-        CustomSession session = req.getCustomSession();
 
-        Long targetDirectoryId = data.getTargetDirectoryId();
-        String newDirName = StringUtil.sanitizeFileName(data.getNewDirectoryName());
+        Runnable process = () -> {
+            CustomSession session = req.getCustomSession();
+    
+            Long targetDirectoryId = data.getTargetDirectoryId();
+            String newDirName = StringUtil.sanitizeFileName(data.getNewDirectoryName());
+    
+            Long userId = session.getUserId();
+            User user = userService.findById(userId);
+    
+            // check newDirName
+            if (newDirName == null || newDirName.length() == 0) {
+                throw new FileManagementException(
+                        "The name of the new directory is not valid.");
+            }
+    
+            // check target dir (sub dir)
+            Directory parentDirectory = directoryService.findDirectoryForUserById(targetDirectoryId, user);
+    
+            // create new dir
+            Directory newDirectory = directoryService.createNewDirectory(newDirName, user, parentDirectory);
+    
+            res.setResult(ResponseEntity.ok()
+                    .body(new ApiResponse<DirectoryReference>("New directory created.",
+                            new DirectoryReference(newDirectory))));
+        };
 
-        Long userId = session.getUserId();
-        User user = userService.findById(userId);
+        threadExecutorService.execute(process);
 
-        // check newDirName
-        if (newDirName == null || newDirName.length() == 0) {
-            throw new FileManagementException(
-                    "The name of the new directory is not valid.");
-        }
-
-        // check target dir (sub dir)
-        Directory parentDirectory = directoryService.findDirectoryForUserById(targetDirectoryId, user);
-
-        // create new dir
-        Directory newDirectory = directoryService.createNewDirectory(newDirName, user, parentDirectory);
-
-        res.setResult(ResponseEntity.ok()
-                .body(new ApiResponse<DirectoryReference>("New directory created.",
-                        new DirectoryReference(newDirectory))));
         return res;
     }
 
