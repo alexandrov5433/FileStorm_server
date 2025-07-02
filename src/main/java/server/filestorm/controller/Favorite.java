@@ -16,6 +16,7 @@ import server.filestorm.model.type.CustomSession;
 import server.filestorm.model.type.fileManagement.ChunkReference;
 import server.filestorm.service.ChunkService;
 import server.filestorm.service.UserService;
+import server.filestorm.thread.ThreadExecutorService;
 import server.filestorm.util.CustomHttpServletRequestWrapper;
 import org.springframework.web.bind.annotation.PostMapping;
 
@@ -28,18 +29,26 @@ public class Favorite {
     @Autowired
     private ChunkService chunkService;
 
+    @Autowired
+    private ThreadExecutorService threadExecutorService;
+
     @GetMapping("/api/favorite")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> getMethodName(
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
-        CustomSession session = req.getCustomSession();
 
-        Long userId = session.getUserId();
-        User user = userService.findById(userId);
+        Runnable process = () -> {
+            CustomSession session = req.getCustomSession();
+    
+            Long userId = session.getUserId();
+            User user = userService.findById(userId);
+    
+            ChunkReference[] favorites = chunkService.getFavoritesForUser(user);
+    
+            res.setResult(ResponseEntity.ok().body(new ApiResponse<ChunkReference[]>("Favorite files.", favorites)));
+        };
 
-        ChunkReference[] favorites = chunkService.getFavoritesForUser(user);
-
-        res.setResult(ResponseEntity.ok().body(new ApiResponse<ChunkReference[]>("Favorite files.", favorites)));
+        threadExecutorService.execute(process);
 
         return res;
     }
@@ -49,19 +58,24 @@ public class Favorite {
             @PathVariable Long fileId,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
-        CustomSession session = req.getCustomSession();
 
-        Long userId = session.getUserId();
-        User user = userService.findById(userId);
+        Runnable process = () -> {
+            CustomSession session = req.getCustomSession();
+    
+            Long userId = session.getUserId();
+            User user = userService.findById(userId);
+    
+            // check file existance and ownership
+            if (fileId == null) {
+                throw new FileManagementException("File ID is required.");
+            }
+            Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
+            chunkService.markChunkAsFavorite(chunk);
+    
+            res.setResult(ResponseEntity.ok().body(new ApiResponse<ChunkReference>("File marked as favorite.", new ChunkReference(chunk))));
+        };
 
-        // check file existance and ownership
-        if (fileId == null) {
-            throw new FileManagementException("File ID is required.");
-        }
-        Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
-        chunkService.markChunkAsFavorite(chunk);
-
-        res.setResult(ResponseEntity.ok().body(new ApiResponse<ChunkReference>("File marked as favorite.", new ChunkReference(chunk))));
+        threadExecutorService.execute(process);
 
         return res;
     }
@@ -71,19 +85,24 @@ public class Favorite {
             @PathVariable Long fileId,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
-        CustomSession session = req.getCustomSession();
 
-        Long userId = session.getUserId();
-        User user = userService.findById(userId);
+        Runnable process = () -> {
+            CustomSession session = req.getCustomSession();
+    
+            Long userId = session.getUserId();
+            User user = userService.findById(userId);
+    
+            // check file existance and ownership
+            if (fileId == null) {
+                throw new FileManagementException("File ID is required.");
+            }
+            Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
+            chunkService.removeChunkFromFavorite(chunk);
+    
+            res.setResult(ResponseEntity.ok().body(new ApiResponse<ChunkReference>("File removed from favorite.", new ChunkReference(chunk))));
+        };
 
-        // check file existance and ownership
-        if (fileId == null) {
-            throw new FileManagementException("File ID is required.");
-        }
-        Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
-        chunkService.removeChunkFromFavorite(chunk);
-
-        res.setResult(ResponseEntity.ok().body(new ApiResponse<ChunkReference>("File removed from favorite.", new ChunkReference(chunk))));
+        threadExecutorService.execute(process);
 
         return res;
     }
