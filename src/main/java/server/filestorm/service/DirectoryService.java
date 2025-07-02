@@ -65,6 +65,7 @@ public class DirectoryService {
                 .orElseThrow(() -> new StorageException("Directory could not be found."));
     }
 
+    @Transactional
     public Directory[] bulkCheckDirectoryOwnershipAndCollect(Long[] directoryIds, User owner) throws StorageException {
         if (directoryIds == null) {
             return new Directory[0];
@@ -84,11 +85,29 @@ public class DirectoryService {
      * @param dir The directory from which the chunk collection must start.
      * @return All collected chunks.
      */
+    @Transactional
     public ArrayList<Chunk> extractChunksFromDirAndSubDirs(Directory dir) {
         ArrayList<Chunk> chunks = new ArrayList<Chunk>(dir.getChunks());
         List<Directory> subdirectories = dir.getSubdirectories();
         for (Directory subdir : subdirectories) {
             ArrayList<Chunk> subChunks = extractChunksFromDirAndSubDirs(subdir);
+            chunks.addAll(subChunks);
+        }
+        return chunks;
+    }
+
+    /**
+     * Collects all chunks from all given directories, their subdirectories and all
+     * other subdirectories down the directory tree.
+     * 
+     * @param dirs The directories from which the chunk collection must start.
+     * @return All collected chunks.
+     */
+    @Transactional
+    public ArrayList<Chunk> extractChunksFromDirAndSubDirs(Directory[] dirs) {
+        ArrayList<Chunk> chunks = new ArrayList<Chunk>();
+        for (Directory dir : dirs) {
+            ArrayList<Chunk> subChunks = extractChunksFromDirAndSubDirs(dir);
             chunks.addAll(subChunks);
         }
         return chunks;
@@ -103,6 +122,7 @@ public class DirectoryService {
      *            start.
      * @return All collected directories.
      */
+    @Transactional
     public ArrayList<Directory> extractDirectoriesFromDirAndSubDirs(Directory dir) {
         ArrayList<Directory> subdirectories = new ArrayList<Directory>(dir.getSubdirectories());
         for (Directory subdir : subdirectories) {
@@ -110,6 +130,24 @@ public class DirectoryService {
             subdirectories.addAll(deeperSubdirs);
         }
         return subdirectories;
+    }
+
+    /**
+     * Collects all subdirectories form all given directories and from all directories
+     * found down the directory tree. The initially given (array of) directories ARE NOT
+     * included in the final result.
+     * 
+     * @param dirs The directories, from which the collection must start.
+     * @return All collected directories.
+     */
+    @Transactional
+    public ArrayList<Directory> extractDirectoriesFromDirAndSubDirs(Directory[] dirs) {
+        ArrayList<Directory> allDirs = new ArrayList<Directory>();
+        for (Directory dir : allDirs) {
+            ArrayList<Directory> subdirs = extractDirectoriesFromDirAndSubDirs(dir);
+            allDirs.addAll(subdirs);
+        }
+        return allDirs;
     }
 
     /**
