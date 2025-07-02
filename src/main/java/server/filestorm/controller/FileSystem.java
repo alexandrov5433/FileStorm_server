@@ -23,6 +23,7 @@ import server.filestorm.model.type.ApiResponse;
 import server.filestorm.model.type.BulkDownloadData;
 import server.filestorm.model.type.CustomSession;
 import server.filestorm.model.type.FileUploadData;
+import server.filestorm.model.type.authentication.UserReference;
 import server.filestorm.model.type.fileManagement.ChunkReference;
 import server.filestorm.model.type.fileManagement.DirectoryCreationData;
 import server.filestorm.model.type.fileManagement.DirectoryReference;
@@ -262,7 +263,7 @@ public class FileSystem {
         fileSystemService.deleteDirectoryAndFiles(directoriesForDeletion, chunksForDeletion, user);
 
         res.setResult(ResponseEntity.ok()
-                .body(new ApiResponse<Long>("Directory deleted.", directoryId)));
+                .body(new ApiResponse<UserReference>("Directory deleted.", new UserReference(user))));
         return res;
     }
 }
