@@ -1,6 +1,7 @@
 package server.filestorm.controller;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.zip.ZipOutputStream;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,13 +15,16 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.context.request.async.DeferredResult;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import server.filestorm.exception.FileManagementException;
 import server.filestorm.model.entity.Chunk;
 import server.filestorm.model.entity.Directory;
 import server.filestorm.model.entity.User;
 import server.filestorm.model.type.ApiResponse;
-import server.filestorm.model.type.BulkDownloadData;
+import server.filestorm.model.type.BulkManipulationData;
 import server.filestorm.model.type.CustomSession;
 import server.filestorm.model.type.FileUploadData;
 import server.filestorm.model.type.authentication.UserReference;
@@ -32,12 +36,9 @@ import server.filestorm.service.ChunkService;
 import server.filestorm.service.DirectoryService;
 import server.filestorm.service.FileSystemService;
 import server.filestorm.service.UserService;
+import server.filestorm.thread.ThreadExecutorService;
 import server.filestorm.util.CustomHttpServletRequestWrapper;
 import server.filestorm.util.StringUtil;
-
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 
 @Controller
 public class FileSystem {
@@ -53,6 +54,9 @@ public class FileSystem {
 
     @Autowired
     private DirectoryService directoryService;
+
+    @Autowired
+    private ThreadExecutorService threadExecutorService;
 
     @GetMapping("/api/file/{fileId}")
     public DeferredResult<ResponseEntity<?>> downloadFile(
@@ -160,7 +164,7 @@ public class FileSystem {
 
     @PostMapping(path = "/api/file/bulk", consumes = "application/json", produces = "application/zip")
     public ResponseEntity<StreamingResponseBody> bulkDownloadFiles(
-            @RequestBody BulkDownloadData buldDownloadData,
+            @RequestBody BulkManipulationData buldDownloadData,
             CustomHttpServletRequestWrapper req) {
         CustomSession session = req.getCustomSession();
         Long userId = session.getUserId();
@@ -182,6 +186,41 @@ public class FileSystem {
                         e.printStackTrace();
                     }
                 });
+    }
+
+    @DeleteMapping(path = "/api/file/bulk", consumes = "application/json")
+    public DeferredResult<ResponseEntity<ApiResponse<?>>> bulkDeleteFiles(
+            @RequestBody BulkManipulationData buklDeleteData,
+            CustomHttpServletRequestWrapper req) {
+        DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
+
+        Runnable process = () -> {
+            CustomSession session = req.getCustomSession();
+            Long userId = session.getUserId();
+            User user = userService.findById(userId);
+
+            Long[] chunkIds = buklDeleteData.getChunks();
+            Long[] directoryIds = buklDeleteData.getDirectories();
+
+            Chunk[] chunks = chunkService.bulkCheckChunkOwnershipAndCollect(chunkIds, user);
+            Directory[] directories = directoryService.bulkCheckDirectoryOwnershipAndCollect(directoryIds, user);
+
+            ArrayList<Chunk> chunksForDeletion = directoryService.extractChunksFromDirAndSubDirs(directories);
+            chunksForDeletion.addAll(Arrays.asList(chunks));
+
+            ArrayList<Directory> directoriesForDeletion = directoryService
+                    .extractDirectoriesFromDirAndSubDirs(directories);
+            directoriesForDeletion.addAll(Arrays.asList(directories));
+
+            fileSystemService.deleteDirectoriesAndFiles(directoriesForDeletion, chunksForDeletion, user);
+
+            res.setResult(ResponseEntity.ok()
+                    .body(new ApiResponse<UserReference>("OK.", new UserReference(user))));
+        };
+
+        threadExecutorService.execute(process);
+
+        return res;
     }
 
     @GetMapping("/api/directory/{directoryId}")
@@ -241,29 +280,35 @@ public class FileSystem {
             @PathVariable Long directoryId,
             CustomHttpServletRequestWrapper req) {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
-        CustomSession session = req.getCustomSession();
 
-        Long userId = session.getUserId();
-        User user = userService.findById(userId);
+        Runnable process = () -> {
+            CustomSession session = req.getCustomSession();
+    
+            Long userId = session.getUserId();
+            User user = userService.findById(userId);
+    
+            // check target dir and that it is not root user storage dir
+            Directory targetDirectory = directoryService.findDirectoryForUserById(directoryId, user);
+            if (targetDirectory.getName() == Long.toString(userId) && targetDirectory.getParentDirectory() == null) {
+                throw new FileManagementException(
+                        "The targeted directory for deletion can not be the root user storage directory.");
+            }
+    
+            // collect everything for deletion
+            ArrayList<Chunk> chunksForDeletion = directoryService.extractChunksFromDirAndSubDirs(targetDirectory);
+            ArrayList<Directory> directoriesForDeletion = directoryService
+                    .extractDirectoriesFromDirAndSubDirs(targetDirectory);
+            directoriesForDeletion.add(targetDirectory);
+    
+            // delete files form FS and DB and directories from DB
+            fileSystemService.deleteDirectoriesAndFiles(directoriesForDeletion, chunksForDeletion, user);
+    
+            res.setResult(ResponseEntity.ok()
+                    .body(new ApiResponse<UserReference>("Directory deleted.", new UserReference(user))));
+        };
 
-        // check target dir and that it is not root user storage dir
-        Directory targetDirectory = directoryService.findDirectoryForUserById(directoryId, user);
-        if (targetDirectory.getName() == Long.toString(userId) && targetDirectory.getParentDirectory() == null) {
-            throw new FileManagementException(
-                    "The targeted directory for deletion can not be the root user storage directory.");
-        }
+        threadExecutorService.execute(process);
 
-        // collect everything for deletion
-        ArrayList<Chunk> chunksForDeletion = directoryService.extractChunksFromDirAndSubDirs(targetDirectory);
-        ArrayList<Directory> directoriesForDeletion = directoryService
-                .extractDirectoriesFromDirAndSubDirs(targetDirectory);
-        directoriesForDeletion.add(targetDirectory);
-
-        // delete files form FS and DB and directories from DB
-        fileSystemService.deleteDirectoryAndFiles(directoriesForDeletion, chunksForDeletion, user);
-
-        res.setResult(ResponseEntity.ok()
-                .body(new ApiResponse<UserReference>("Directory deleted.", new UserReference(user))));
         return res;
     }
 }
