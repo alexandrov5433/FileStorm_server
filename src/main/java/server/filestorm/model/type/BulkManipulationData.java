@@ -1,15 +1,15 @@
 package server.filestorm.model.type;
 
-public class BulkDownloadData {
+public class BulkManipulationData {
     private Long[] chunks;
     private Long[] directories;
 
-    public BulkDownloadData() {
+    public BulkManipulationData() {
         this.chunks = null;
         this.directories = null;
     }
 
-    public BulkDownloadData(Long[] chunks, Long[] directories) {
+    public BulkManipulationData(Long[] chunks, Long[] directories) {
         this.chunks = chunks;
         this.directories = directories;
     }
