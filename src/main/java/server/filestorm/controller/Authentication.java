@@ -55,44 +55,51 @@ public class Authentication {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
 
         Runnable process = () -> {
-            // create user if register data is valid
-            AuthResult<?> authResult = authService.registerUser(data);
+            try {
+                // create user if register data is valid
+                AuthResult<?> authResult = authService.registerUser(data);
 
-            if (authResult.getIsAuthError()) {
-                res.setResult(ResponseEntity.badRequest()
-                        .body(new ApiResponse<AuthValidationResult[]>("Login not successfull.",
-                                (AuthValidationResult[]) authResult.getPayload())));
-            } else {
-                User user = (User) authResult.getPayload();
+                if (authResult.getIsAuthError()) {
+                    res.setResult(ResponseEntity.badRequest()
+                            .body(new ApiResponse<AuthValidationResult[]>(
+                                    "Login not successfull.",
+                                    (AuthValidationResult[]) authResult
+                                            .getPayload())));
+                } else {
+                    User user = (User) authResult.getPayload();
 
-                // create JWT and cookie value
-                Map<String, Object> claims = new HashMap<String, Object>();
-                claims.put("id", user.getId());
-                claims.put("username", user.getUsername());
-                String token = jwtUtil.genareteToken(user.getUsername(), claims);
-                String setCookieHeaderValue = String
-                        .format("FileStormUserSession=%1$s; Path=/; Max-Age=31556952; HttpOnly; Secure;",
-                                token); // 31556952s=1y
+                    // create JWT and cookie value
+                    Map<String, Object> claims = new HashMap<String, Object>();
+                    claims.put("id", user.getId());
+                    claims.put("username", user.getUsername());
+                    String token = jwtUtil.genareteToken(user.getUsername(), claims);
+                    String setCookieHeaderValue = String
+                            .format("FileStormUserSession=%1$s; Path=/; Max-Age=31556952; HttpOnly; Secure;",
+                                    token); // 31556952s=1y
 
-                // create user specific storage directory
-                File rootUserDir = fileService
-                        .createRootDirectoryForUser(Long.toString(user.getId()));
-                if (rootUserDir == null) {
-                    res.setResult(ResponseEntity.status(500)
-                            .body(new ApiResponse<>(
-                                    "Could not create a new storage directory for user.")));
-                    return;
+                    // create user specific storage directory
+                    File rootUserDir = fileService
+                            .createRootDirectoryForUser(Long.toString(user.getId()));
+                    if (rootUserDir == null) {
+                        res.setResult(ResponseEntity.status(500)
+                                .body(new ApiResponse<>(
+                                        "Could not create a new storage directory for user.")));
+                        return;
+                    }
+
+                    // add user storage dir to his DB reference
+                    Directory rootStorageDir = directoryService
+                            .createNewDirectory(rootUserDir.getName(), user);
+                    userService.addRootStorageDirToUser(user, rootStorageDir);
+
+                    // responde 200 with cookie
+                    res.setResult(ResponseEntity.ok()
+                            .header("Set-Cookie", setCookieHeaderValue)
+                            .body(new ApiResponse<UserReference>("Registration successful.",
+                                    new UserReference(user))));
                 }
-
-                // add user storage dir to his DB reference
-                Directory rootStorageDir = directoryService.createNewDirectory(rootUserDir.getName(), user);
-                userService.addRootStorageDirToUser(user, rootStorageDir);
-
-                // responde 200 with cookie
-                res.setResult(ResponseEntity.ok()
-                        .header("Set-Cookie", setCookieHeaderValue)
-                        .body(new ApiResponse<UserReference>("Registration successful.",
-                                new UserReference(user))));
+            } catch (Exception e) {
+                res.setErrorResult(e);
             }
         };
 
@@ -106,28 +113,32 @@ public class Authentication {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
 
         Runnable process = () -> {
-            AuthResult<?> authResult = authService.loginUser(data);
+            try {
+                AuthResult<?> authResult = authService.loginUser(data);
 
-            if (authResult.getIsAuthError()) {
-                res.setResult(ResponseEntity.badRequest()
-                        .body(new ApiResponse<AuthValidationResult[]>("Login not successfull.",
-                                (AuthValidationResult[]) authResult.getPayload())));
-            } else {
-                User user = (User) authResult.getPayload();
+                if (authResult.getIsAuthError()) {
+                    res.setResult(ResponseEntity.badRequest()
+                            .body(new ApiResponse<AuthValidationResult[]>("Login not successfull.",
+                                    (AuthValidationResult[]) authResult.getPayload())));
+                } else {
+                    User user = (User) authResult.getPayload();
 
-                // create JWT and cookie value
-                Map<String, Object> claims = new HashMap<String, Object>();
-                claims.put("id", user.getId());
-                claims.put("username", user.getUsername());
-                String token = jwtUtil.genareteToken(user.getUsername(), claims);
-                String setCookieHeaderValue = String
-                        .format("FileStormUserSession=%1$s; Path=/; Max-Age=31556952; HttpOnly; Secure;",
-                                token); // 31556952s=1y
+                    // create JWT and cookie value
+                    Map<String, Object> claims = new HashMap<String, Object>();
+                    claims.put("id", user.getId());
+                    claims.put("username", user.getUsername());
+                    String token = jwtUtil.genareteToken(user.getUsername(), claims);
+                    String setCookieHeaderValue = String
+                            .format("FileStormUserSession=%1$s; Path=/; Max-Age=31556952; HttpOnly; Secure;",
+                                    token); // 31556952s=1y
 
-                res.setResult(ResponseEntity.ok()
-                        .header("Set-Cookie", setCookieHeaderValue)
-                        .body(new ApiResponse<UserReference>("Login successful.",
-                                new UserReference(user))));
+                    res.setResult(ResponseEntity.ok()
+                            .header("Set-Cookie", setCookieHeaderValue)
+                            .body(new ApiResponse<UserReference>("Login successful.",
+                                    new UserReference(user))));
+                }
+            } catch (Exception e) {
+                res.setErrorResult(e);
             }
         };
 
@@ -141,14 +152,18 @@ public class Authentication {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
 
         Runnable process = () -> {
-            // set cookie value to nothing and delete instantly
-            String setCookieHeaderValue = String
-                    .format("FileStormUserSession=%1$s; Path=/; Max-Age=0; HttpOnly; Secure;", "");
-    
-            res.setResult(
-                    ResponseEntity.ok()
-                            .header("Set-Cookie", setCookieHeaderValue)
-                            .body(new ApiResponse<>("Logout successful.")));
+            try {
+                // set cookie value to nothing and delete instantly
+                String setCookieHeaderValue = String
+                        .format("FileStormUserSession=%1$s; Path=/; Max-Age=0; HttpOnly; Secure;", "");
+
+                res.setResult(
+                        ResponseEntity.ok()
+                                .header("Set-Cookie", setCookieHeaderValue)
+                                .body(new ApiResponse<>("Logout successful.")));
+            } catch (Exception e) {
+                res.setErrorResult(e);
+            }
         };
 
         threadExecutorService.execute(process);
@@ -161,43 +176,49 @@ public class Authentication {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
 
         Runnable process = () -> {
-            CustomSession session = req.getCustomSession();
-    
-            // delete cookie from client
-            String setCookieHeaderDeletionValue = String
-                    .format("FileStormUserSession=%1$s; Path=/; Max-Age=0; HttpOnly; Secure;", "");
-    
-            if (session == null) {
-                res.setResult(
-                        ResponseEntity.badRequest()
-                                .header("Set-Cookie", setCookieHeaderDeletionValue)
-                                .body(new ApiResponse<>("No session.")));
-            } else {
-                Long userId = session.getUserId();
-                String username = session.getUsername();
-    
-                if (userId == null || username == null) {
-                    res.setResult(
-                            ResponseEntity.badRequest()
-                                    .header("Set-Cookie", setCookieHeaderDeletionValue)
-                                    .body(new ApiResponse<>("No session.")));
-                    return;
-                }
-    
-                User user = authService.validateSessionData(userId, username);
-                if (user == null) {
+            try {
+                CustomSession session = req.getCustomSession();
+
+                // delete cookie from client
+                String setCookieHeaderDeletionValue = String
+                        .format("FileStormUserSession=%1$s; Path=/; Max-Age=0; HttpOnly; Secure;", "");
+
+                if (session == null) {
                     res.setResult(
                             ResponseEntity.badRequest()
                                     .header("Set-Cookie", setCookieHeaderDeletionValue)
                                     .body(new ApiResponse<>("No session.")));
                 } else {
-                    res.setResult(
-                            ResponseEntity.ok()
-                                    .body(new ApiResponse<UserReference>("Session valid.",
-                                            new UserReference(user))));
-                }
-            }
+                    Long userId = session.getUserId();
+                    String username = session.getUsername();
 
+                    if (userId == null || username == null) {
+                        res.setResult(
+                                ResponseEntity.badRequest()
+                                        .header("Set-Cookie",
+                                                setCookieHeaderDeletionValue)
+                                        .body(new ApiResponse<>("No session.")));
+                        return;
+                    }
+
+                    User user = authService.validateSessionData(userId, username);
+                    if (user == null) {
+                        res.setResult(
+                                ResponseEntity.badRequest()
+                                        .header("Set-Cookie",
+                                                setCookieHeaderDeletionValue)
+                                        .body(new ApiResponse<>("No session.")));
+                    } else {
+                        res.setResult(
+                                ResponseEntity.ok()
+                                        .body(new ApiResponse<UserReference>(
+                                                "Session valid.",
+                                                new UserReference(user))));
+                    }
+                }
+            } catch (Exception e) {
+                res.setErrorResult(e);
+            }
         };
 
         threadExecutorService.execute(process);

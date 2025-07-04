@@ -27,12 +27,15 @@ public class UserData {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
 
         Runnable process = () -> {
-            CustomSession session = req.getCustomSession();
-            Long userId = session.getUserId();
-            User user = userService.findById(userId);
-            res.setResult(ResponseEntity.ok()
-                .body(new ApiResponse<Long>("Ok", user.getBytesInStorage()))
-            );
+            try {
+                CustomSession session = req.getCustomSession();
+                Long userId = session.getUserId();
+                User user = userService.findById(userId);
+                res.setResult(ResponseEntity.ok()
+                        .body(new ApiResponse<Long>("Ok", user.getBytesInStorage())));
+            } catch (Exception e) {
+                res.setErrorResult(e);
+            }
         };
 
         threadExecutorService.execute(process);

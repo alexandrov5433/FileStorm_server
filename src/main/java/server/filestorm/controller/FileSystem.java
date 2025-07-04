@@ -65,17 +65,21 @@ public class FileSystem {
         DeferredResult<ResponseEntity<?>> res = new DeferredResult<>();
 
         Runnable process = () -> {
-            CustomSession session = req.getCustomSession();
+            try {
+                CustomSession session = req.getCustomSession();
 
-            Long userId = session.getUserId();
-            User user = userService.findById(userId);
-            Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
+                Long userId = session.getUserId();
+                User user = userService.findById(userId);
+                Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
 
-            // return file
-            Resource file = fileSystemService.loadAsResource(chunk);
-            res.setResult(ResponseEntity.ok()
-                    .header("Content-Type", chunk.getMimeType())
-                    .body(file));
+                // return file
+                Resource file = fileSystemService.loadAsResource(chunk);
+                res.setResult(ResponseEntity.ok()
+                        .header("Content-Type", chunk.getMimeType())
+                        .body(file));
+            } catch (Exception e) {
+                res.setErrorResult(e);
+            }
         };
 
         threadExecutorService.execute(process);
@@ -90,28 +94,31 @@ public class FileSystem {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
 
         Runnable process = () -> {
-            CustomSession session = req.getCustomSession();
+            try {
+                CustomSession session = req.getCustomSession();
+                Long userId = session.getUserId();
+                User user = userService.findById(userId);
 
-            Long userId = session.getUserId();
-            User user = userService.findById(userId);
+                Long targetDirectoryId = fileUploadData.getTargetDirectoryId();
+                // check upload dir and entry in DB
+                Directory directory = directoryService.findDirectoryForUserById(targetDirectoryId, user);
 
-            Long targetDirectoryId = fileUploadData.getTargetDirectoryId();
-            // check upload dir and entry in DB
-            Directory directory = directoryService.findDirectoryForUserById(targetDirectoryId, user);
+                // check storage space availability
+                Long fileSize = fileUploadData.getFile().getSize();
+                if (user.getMaxStorageSpace() - user.getBytesInStorage() < fileSize) {
+                    throw new FileManagementException("Not enough free storage space for this file.");
+                }
 
-            // check storage space availability
-            Long fileSize = fileUploadData.getFile().getSize();
-            if (user.getMaxStorageSpace() - user.getBytesInStorage() < fileSize) {
-                throw new FileManagementException("Not enough free storage space for this file.");
+                // save file is FS and DB
+                Chunk chunk = fileSystemService.store(fileUploadData, user, directory);
+
+                ChunkReference chunkRef = new ChunkReference(chunk);
+
+                res.setResult(ResponseEntity.ok()
+                        .body(new ApiResponse<ChunkReference>("File saved.", chunkRef)));
+            } catch (Exception e) {
+                res.setErrorResult(e);
             }
-
-            // save file is FS and DB
-            Chunk chunk = fileSystemService.store(fileUploadData, user, directory);
-
-            ChunkReference chunkRef = new ChunkReference(chunk);
-
-            res.setResult(ResponseEntity.ok()
-                    .body(new ApiResponse<ChunkReference>("File saved.", chunkRef)));
         };
 
         threadExecutorService.execute(process);
@@ -126,19 +133,23 @@ public class FileSystem {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
 
         Runnable process = () -> {
-            CustomSession session = req.getCustomSession();
+            try {
+                CustomSession session = req.getCustomSession();
 
-            Long userId = session.getUserId();
-            User user = userService.findById(userId);
+                Long userId = session.getUserId();
+                User user = userService.findById(userId);
 
-            // verify file existance and ownership in DB
-            Chunk chunkForDeletion = chunkService.findChunkByIdAndOwner(fileId, user);
+                // verify file existance and ownership in DB
+                Chunk chunkForDeletion = chunkService.findChunkByIdAndOwner(fileId, user);
 
-            // delete chunk from DB and FS
-            fileSystemService.deleteFile(chunkForDeletion, user);
+                // delete chunk from DB and FS
+                fileSystemService.deleteFile(chunkForDeletion, user);
 
-            res.setResult(ResponseEntity.ok()
-                    .body(new ApiResponse<Long>("File deleted.", chunkForDeletion.getId())));
+                res.setResult(ResponseEntity.ok()
+                        .body(new ApiResponse<Long>("File deleted.", chunkForDeletion.getId())));
+            } catch (Exception e) {
+                res.setErrorResult(e);
+            }
         };
 
         threadExecutorService.execute(process);
@@ -156,25 +167,25 @@ public class FileSystem {
         Runnable process = () -> {
             try {
                 CustomSession session = req.getCustomSession();
-    
+
                 Long userId = session.getUserId();
                 User user = userService.findById(userId);
-    
+
                 // check file existance and ownership
                 if (fileId == null) {
                     throw new FileManagementException("File ID is required.");
                 }
                 Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
-    
+
                 // sanitize newFileNameWithoutTheExtention
                 String sanitizedFileName = StringUtil.sanitizeFileName(newFileNameWithoutTheExtention);
-    
+
                 // chage chunk name in DB
                 chunk = chunkService.updateOriginalFileName(chunk, sanitizedFileName);
                 if (chunk == null) {
                     throw new FileManagementException("Could not change the name.");
                 }
-    
+
                 // return ChunkReference
                 res.setResult(ResponseEntity.ok()
                         .body(new ApiResponse<ChunkReference>("Name changed.", new ChunkReference(chunk))));
@@ -221,27 +232,31 @@ public class FileSystem {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
 
         Runnable process = () -> {
-            CustomSession session = req.getCustomSession();
-            Long userId = session.getUserId();
-            User user = userService.findById(userId);
+            try {
+                CustomSession session = req.getCustomSession();
+                Long userId = session.getUserId();
+                User user = userService.findById(userId);
 
-            Long[] chunkIds = buklDeleteData.getChunks();
-            Long[] directoryIds = buklDeleteData.getDirectories();
+                Long[] chunkIds = buklDeleteData.getChunks();
+                Long[] directoryIds = buklDeleteData.getDirectories();
 
-            Chunk[] chunks = chunkService.bulkCheckChunkOwnershipAndCollect(chunkIds, user);
-            Directory[] directories = directoryService.bulkCheckDirectoryOwnershipAndCollect(directoryIds, user);
+                Chunk[] chunks = chunkService.bulkCheckChunkOwnershipAndCollect(chunkIds, user);
+                Directory[] directories = directoryService.bulkCheckDirectoryOwnershipAndCollect(directoryIds, user);
 
-            ArrayList<Chunk> chunksForDeletion = directoryService.extractChunksFromDirAndSubDirs(directories);
-            chunksForDeletion.addAll(Arrays.asList(chunks));
+                ArrayList<Chunk> chunksForDeletion = directoryService.extractChunksFromDirAndSubDirs(directories);
+                chunksForDeletion.addAll(Arrays.asList(chunks));
 
-            ArrayList<Directory> directoriesForDeletion = directoryService
-                    .extractDirectoriesFromDirAndSubDirs(directories);
-            directoriesForDeletion.addAll(Arrays.asList(directories));
+                ArrayList<Directory> directoriesForDeletion = directoryService
+                        .extractDirectoriesFromDirAndSubDirs(directories);
+                directoriesForDeletion.addAll(Arrays.asList(directories));
 
-            fileSystemService.deleteDirectoriesAndFiles(directoriesForDeletion, chunksForDeletion, user);
+                fileSystemService.deleteDirectoriesAndFiles(directoriesForDeletion, chunksForDeletion, user);
 
-            res.setResult(ResponseEntity.ok()
-                    .body(new ApiResponse<UserReference>("OK.", new UserReference(user))));
+                res.setResult(ResponseEntity.ok()
+                        .body(new ApiResponse<UserReference>("OK.", new UserReference(user))));
+            } catch (Exception e) {
+                res.setErrorResult(e);
+            }
         };
 
         threadExecutorService.execute(process);
@@ -256,19 +271,24 @@ public class FileSystem {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
 
         Runnable process = () -> {
-            CustomSession session = req.getCustomSession();
+            try {
+                CustomSession session = req.getCustomSession();
 
-            Long userId = session.getUserId();
-            User user = userService.findById(userId);
+                Long userId = session.getUserId();
+                User user = userService.findById(userId);
 
-            // check target dir (sub dir)
-            Directory directory = directoryService.findDirectoryForUserById(directoryId, user);
+                // check target dir (sub dir)
+                Directory directory = directoryService.findDirectoryForUserById(directoryId, user);
 
-            // return directory data
-            HydratedDirectoryReference hydratedDirectory = new HydratedDirectoryReference(directory);
+                // return directory data
+                HydratedDirectoryReference hydratedDirectory = new HydratedDirectoryReference(directory);
 
-            res.setResult(ResponseEntity.ok()
-                    .body(new ApiResponse<HydratedDirectoryReference>("Serving directory data.", hydratedDirectory)));
+                res.setResult(ResponseEntity.ok()
+                        .body(new ApiResponse<HydratedDirectoryReference>("Serving directory data.",
+                                hydratedDirectory)));
+            } catch (Exception e) {
+                res.setErrorResult(e);
+            }
         };
 
         threadExecutorService.execute(process);
@@ -283,29 +303,33 @@ public class FileSystem {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
 
         Runnable process = () -> {
-            CustomSession session = req.getCustomSession();
+            try {
+                CustomSession session = req.getCustomSession();
 
-            Long targetDirectoryId = data.getTargetDirectoryId();
-            String newDirName = StringUtil.sanitizeFileName(data.getNewDirectoryName());
+                Long targetDirectoryId = data.getTargetDirectoryId();
+                String newDirName = StringUtil.sanitizeFileName(data.getNewDirectoryName());
 
-            Long userId = session.getUserId();
-            User user = userService.findById(userId);
+                Long userId = session.getUserId();
+                User user = userService.findById(userId);
 
-            // check newDirName
-            if (newDirName == null || newDirName.length() == 0) {
-                throw new FileManagementException(
-                        "The name of the new directory is not valid.");
+                // check newDirName
+                if (newDirName == null || newDirName.length() == 0) {
+                    throw new FileManagementException(
+                            "The name of the new directory is not valid.");
+                }
+
+                // check target dir (sub dir)
+                Directory parentDirectory = directoryService.findDirectoryForUserById(targetDirectoryId, user);
+
+                // create new dir
+                Directory newDirectory = directoryService.createNewDirectory(newDirName, user, parentDirectory);
+
+                res.setResult(ResponseEntity.ok()
+                        .body(new ApiResponse<DirectoryReference>("New directory created.",
+                                new DirectoryReference(newDirectory))));
+            } catch (Exception e) {
+                res.setErrorResult(e);
             }
-
-            // check target dir (sub dir)
-            Directory parentDirectory = directoryService.findDirectoryForUserById(targetDirectoryId, user);
-
-            // create new dir
-            Directory newDirectory = directoryService.createNewDirectory(newDirName, user, parentDirectory);
-
-            res.setResult(ResponseEntity.ok()
-                    .body(new ApiResponse<DirectoryReference>("New directory created.",
-                            new DirectoryReference(newDirectory))));
         };
 
         threadExecutorService.execute(process);
@@ -320,29 +344,34 @@ public class FileSystem {
         DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
 
         Runnable process = () -> {
-            CustomSession session = req.getCustomSession();
+            try {
+                CustomSession session = req.getCustomSession();
 
-            Long userId = session.getUserId();
-            User user = userService.findById(userId);
+                Long userId = session.getUserId();
+                User user = userService.findById(userId);
 
-            // check target dir and that it is not root user storage dir
-            Directory targetDirectory = directoryService.findDirectoryForUserById(directoryId, user);
-            if (targetDirectory.getName() == Long.toString(userId) && targetDirectory.getParentDirectory() == null) {
-                throw new FileManagementException(
-                        "The targeted directory for deletion can not be the root user storage directory.");
+                // check target dir and that it is not root user storage dir
+                Directory targetDirectory = directoryService.findDirectoryForUserById(directoryId, user);
+                if (targetDirectory.getName() == Long.toString(userId)
+                        && targetDirectory.getParentDirectory() == null) {
+                    throw new FileManagementException(
+                            "The targeted directory for deletion can not be the root user storage directory.");
+                }
+
+                // collect everything for deletion
+                ArrayList<Chunk> chunksForDeletion = directoryService.extractChunksFromDirAndSubDirs(targetDirectory);
+                ArrayList<Directory> directoriesForDeletion = directoryService
+                        .extractDirectoriesFromDirAndSubDirs(targetDirectory);
+                directoriesForDeletion.add(targetDirectory);
+
+                // delete files form FS and DB and directories from DB
+                fileSystemService.deleteDirectoriesAndFiles(directoriesForDeletion, chunksForDeletion, user);
+
+                res.setResult(ResponseEntity.ok()
+                        .body(new ApiResponse<UserReference>("Directory deleted.", new UserReference(user))));
+            } catch (Exception e) {
+                res.setErrorResult(e);
             }
-
-            // collect everything for deletion
-            ArrayList<Chunk> chunksForDeletion = directoryService.extractChunksFromDirAndSubDirs(targetDirectory);
-            ArrayList<Directory> directoriesForDeletion = directoryService
-                    .extractDirectoriesFromDirAndSubDirs(targetDirectory);
-            directoriesForDeletion.add(targetDirectory);
-
-            // delete files form FS and DB and directories from DB
-            fileSystemService.deleteDirectoriesAndFiles(directoriesForDeletion, chunksForDeletion, user);
-
-            res.setResult(ResponseEntity.ok()
-                    .body(new ApiResponse<UserReference>("Directory deleted.", new UserReference(user))));
         };
 
         threadExecutorService.execute(process);
