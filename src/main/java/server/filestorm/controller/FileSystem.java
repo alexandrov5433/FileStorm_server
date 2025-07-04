@@ -378,4 +378,36 @@ public class FileSystem {
 
         return res;
     }
+
+    @PatchMapping("/api/directory/{directoryId}")
+    public DeferredResult<ResponseEntity<ApiResponse<?>>> changeDirectoryName(
+            @PathVariable Long directoryId,
+            @RequestParam String newDirecotoryName,
+            CustomHttpServletRequestWrapper req) {
+        DeferredResult<ResponseEntity<ApiResponse<?>>> res = new DeferredResult<>();
+
+        Runnable process = () -> {
+            try {
+                CustomSession session = req.getCustomSession();
+                Long userId = session.getUserId();
+                User user = userService.findById(userId);
+
+                Directory directory = directoryService.findDirectoryForUserById(directoryId, user);
+                String sanitizedDirectoryName = StringUtil.sanitizeFileName(newDirecotoryName);
+
+                directoryService.changeDirectoryName(directory, sanitizedDirectoryName);
+
+                res.setResult(ResponseEntity.ok()
+                        .body(new ApiResponse<DirectoryReference>("Directory name changed.",
+                                new DirectoryReference(directory))));
+            } catch (Exception e) {
+                res.setErrorResult(e);
+            }
+        };
+
+        threadExecutorService.execute(process);
+
+        return res;
+    }
+
 }

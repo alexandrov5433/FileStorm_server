@@ -2,11 +2,13 @@ package server.filestorm.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import server.filestorm.exception.FileManagementException;
 import server.filestorm.exception.StorageException;
 import server.filestorm.model.entity.Chunk;
 import server.filestorm.model.entity.Directory;
@@ -133,8 +135,10 @@ public class DirectoryService {
     }
 
     /**
-     * Collects all subdirectories form all given directories and from all directories
-     * found down the directory tree. The initially given (array of) directories ARE NOT
+     * Collects all subdirectories form all given directories and from all
+     * directories
+     * found down the directory tree. The initially given (array of) directories ARE
+     * NOT
      * included in the final result.
      * 
      * @param dirs The directories, from which the collection must start.
@@ -167,5 +171,25 @@ public class DirectoryService {
             }
         }
         return false;
+    }
+
+    @Transactional
+    public Directory changeDirectoryName(Directory directory, String newName) {
+        Directory parentDirectory = directory.getParentDirectory()
+                .orElseThrow(() -> new FileManagementException("This directory can not be renamed."));
+
+        // check directory name avilability
+        List<String> allDirNamesInParentDir = parentDirectory.getSubdirectories()
+            .stream()
+            .map(Directory::getName)
+            .collect(Collectors.toList());
+        for (String otherName : allDirNamesInParentDir) {
+            if (otherName.equals(newName)) {
+                throw new FileManagementException("A directory with this name already exists here.");
+            }
+        }
+
+        directory.setName(newName);
+        return directoryRepository.save(directory);
     }
 }
