@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import server.filestorm.exception.FileManagementException;
 import server.filestorm.model.entity.Chunk;
-import server.filestorm.model.entity.Directory;
 import server.filestorm.model.entity.User;
 import server.filestorm.model.repository.ChunkRepository;
 import server.filestorm.model.type.fileManagement.ChunkReference;
