@@ -1,6 +1,8 @@
 package server.filestorm.service;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -8,9 +10,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import server.filestorm.exception.FileManagementException;
 import server.filestorm.model.entity.Chunk;
+import server.filestorm.model.entity.Directory;
 import server.filestorm.model.entity.User;
 import server.filestorm.model.repository.ChunkRepository;
 import server.filestorm.model.type.fileManagement.ChunkReference;
+import server.filestorm.util.StringUtil;
 
 @Service
 public class ChunkService {
@@ -56,8 +60,22 @@ public class ChunkService {
     }
 
     @Transactional
-    public Chunk updateOriginalFileName(Chunk chunk, String newName) {
-        chunk.setOriginalFileName(newName);
+    public Chunk updateOriginalFileName(Chunk chunk, String newFileNameWithoutTheExtention) throws FileManagementException {
+        String extention = StringUtil.extractFileExtention(chunk);
+        String newOriginalFileName = newFileNameWithoutTheExtention + extention;
+
+        // check name availability
+        List<String> allFileNamesInDir = chunk.getDirectory().getChunks().stream()
+            .map(Chunk::getOriginalFileName)
+            .collect(Collectors.toList());
+        
+        for (String otherName : allFileNamesInDir) {
+            if (otherName.equals(newOriginalFileName)) {
+                throw new FileManagementException("A file with this name already exists in this directory.");
+            }
+        }
+
+        chunk.setOriginalFileName(newOriginalFileName);
         return chunkRepository.save(chunk);
     }
 
