@@ -4,6 +4,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import server.filestorm.exception.ProcessingException;
+import server.filestorm.model.entity.Chunk;
 
 public class StringUtil {
 
@@ -61,5 +62,21 @@ public class StringUtil {
             throw new ProcessingException("The name is missing.");
         }
         return name;
+    }
+
+    /**
+     * Extracts the file exrention form the name property of the Chunk.
+     * @param c The Chunk from which the file extention is extracted.
+     * @return The file extention - e.g. ".jpg".
+     */
+    public static String extractFileExtention(Chunk c) {
+        String name = c.getName();
+        int extentionDotIndex = name.lastIndexOf((int) '.');
+        // converting char to int gives the UTF-16 code unit of that char - which is the same as the Unicode code point
+        if (extentionDotIndex < 0 || extentionDotIndex > name.length()) {
+            // String.substring throws IndexOutOfBoundsException if beginIndex is negative or larger than the length of this String object.
+            return "";
+        }
+        return name.substring(extentionDotIndex);
     }
 }
