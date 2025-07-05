@@ -46,6 +46,11 @@ public class ChunkService {
                 .orElseThrow(() -> new FileManagementException("A file with this ID was not found for this user."));
     }
 
+    public Chunk findPublicChunkById(Long chunkId) throws FileManagementException {
+        return chunkRepository.findPublicChunkById(chunkId)
+            .orElseThrow(() -> new FileManagementException("Public file not found."));
+    }
+
     public Chunk[] bulkCheckChunkOwnershipAndCollect(Long[] chunkIds, User owner) throws FileManagementException {
         if (chunkIds == null) {
             return new Chunk[0];

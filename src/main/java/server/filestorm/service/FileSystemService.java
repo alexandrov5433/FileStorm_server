@@ -1,5 +1,6 @@
 package server.filestorm.service;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -231,6 +232,28 @@ public class FileSystemService {
                 throw new StorageException("Could not read file: " + chunk.getName());
             }
         } catch (MalformedURLException e) {
+            throw new StorageException("Could not read file: " + chunk.getName(), e);
+        }
+    }
+
+    public void streamFileToClient(Chunk chunk, BufferedOutputStream bufferedOutputStream) {
+        try {
+            Path path = this.getAbsolutePath(chunk);
+            boolean isValidFile = this.verifyExistance(path);
+            if (!isValidFile) {
+                throw new StorageException("File could not be accessed.");
+            }
+            File file = path.toFile();
+
+            try (FileInputStream fileInputStream = new FileInputStream(file)) {
+                boolean isChunkSizeOverTwoGB = chunk.getSizeBytes() >= Long.valueOf("2147483648") ? true : false;
+                if (isChunkSizeOverTwoGB) {
+                    IOUtils.copyLarge(fileInputStream, bufferedOutputStream);
+                } else {
+                    IOUtils.copy(fileInputStream, bufferedOutputStream);
+                }
+            } 
+        } catch (Exception e) {
             throw new StorageException("Could not read file: " + chunk.getName(), e);
         }
     }

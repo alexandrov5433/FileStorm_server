@@ -1,5 +1,6 @@
 package server.filestorm.controller;
 
+import java.io.BufferedOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.zip.ZipOutputStream;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import server.filestorm.exception.FileManagementException;
+import server.filestorm.exception.StorageException;
 import server.filestorm.model.entity.Chunk;
 import server.filestorm.model.entity.Directory;
 import server.filestorm.model.entity.User;
@@ -77,6 +79,49 @@ public class FileSystem {
                 res.setResult(ResponseEntity.ok()
                         .header("Content-Type", chunk.getMimeType())
                         .body(file));
+            } catch (Exception e) {
+                res.setErrorResult(e);
+            }
+        };
+
+        threadExecutorService.execute(process);
+
+        return res;
+    }
+
+    @GetMapping("/api/public/file/{fileId}/download")
+    public ResponseEntity<StreamingResponseBody> downloadPublicFile(@PathVariable Long fileId) {
+        // Interface StreamingResponseBody
+        // A controller method return value type for asynchronous request processing where the application can write directly to the response OutputStream without holding up the Servlet container thread.
+        // https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/servlet/mvc/method/annotation/StreamingResponseBody.html
+        Chunk chunk = chunkService.findPublicChunkById(fileId);
+
+        StreamingResponseBody srb = out -> {
+            try (BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(out)) {
+                fileSystemService.streamFileToClient(chunk, bufferedOutputStream);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new StorageException("Erro occured while streaming the file.", e);
+            }
+        };
+
+        return ResponseEntity.ok()
+                .header("Content-Length", String.valueOf(chunk.getSizeBytes()))
+                .header("Content-Disposition", "attachment; filename=\"" + chunk.getOriginalFileName() + "\"")
+                .body(srb);
+
+    }
+
+    @GetMapping("/api/public/file/{fileId}/data")
+    public DeferredResult<ResponseEntity<?>> getPublicFileData(@PathVariable Long fileId) {
+        DeferredResult<ResponseEntity<?>> res = new DeferredResult<>();
+
+        Runnable process = () -> {
+            try {
+                Chunk chunk = chunkService.findPublicChunkById(fileId);
+                res.setResult(ResponseEntity.ok()
+                        .body(new ApiResponse<ChunkReference>("Chunk data.", new ChunkReference(chunk))));
             } catch (Exception e) {
                 res.setErrorResult(e);
             }

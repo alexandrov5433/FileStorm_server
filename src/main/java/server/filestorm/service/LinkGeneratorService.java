@@ -21,7 +21,7 @@ public class LinkGeneratorService {
         if (fileId == null || fileName == null || fileName.trim().length() == 0) {
             throw new ProcessingException("File ID and name are required for the sharing link.");
         }
-        return String.format("%1$s/api/download_shared_file/%2$d/%3$s",
-            this.domain, fileId, fileName);
+        return String.format("%1$s/public/download_shared_file/%2$d",
+            this.domain, fileId);
     }
 }
