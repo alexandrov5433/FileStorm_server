@@ -17,7 +17,6 @@ public class ThreadExecutorService {
 
     public ThreadExecutorService() {
         this.executor = Executors.newCachedThreadPool();
-        System.out.println("\n#####\n" + this.executor.hashCode() + "\n#####\n");
     }
 
     @SuppressWarnings("unused")
