@@ -1,11 +1,11 @@
 package server.filestorm.controller;
 
+import java.io.BufferedOutputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.zip.ZipOutputStream;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -306,31 +306,27 @@ public class FileSharing {
     }
 
     @GetMapping("/api/file-sharing/file")
-    public DeferredResult<ResponseEntity<?>> downloadFile(
+    public ResponseEntity<StreamingResponseBody> downloadFile(
             @RequestParam Long fileId,
             CustomHttpServletRequestWrapper req) {
-        DeferredResult<ResponseEntity<?>> res = new DeferredResult<>();
+        CustomSession session = req.getCustomSession();
+        Long userId = session.getUserId();
+        User user = userService.findById(userId);
+        Chunk sharedChunk = chunkService.findChunkSharedWithUser(fileId, user);
 
-        Runnable process = () -> {
-            try {
-                CustomSession session = req.getCustomSession();
+        StreamingResponseBody srb = out -> {
+            try (BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(out)) {
+                fileSystemService.streamFileToClient(sharedChunk, bufferedOutputStream);
 
-                Long userId = session.getUserId();
-                User user = userService.findById(userId);
-                Chunk sharedChunk = chunkService.findChunkSharedWithUser(fileId, user);
-
-                Resource file = fileSystemService.loadAsResource(sharedChunk);
-                res.setResult(ResponseEntity.ok()
-                        .header("Content-Type", sharedChunk.getMimeType())
-                        .body(file));
             } catch (Exception e) {
-                res.setErrorResult(e);
+                e.printStackTrace();
+                throw new StorageException("Erro occured while streaming the file.", e);
             }
         };
-
-        threadExecutorService.execute(process);
-
-        return res;
+        return ResponseEntity.ok()
+                .header("Content-Type", sharedChunk.getMimeType())
+                .header("Content-Length", String.valueOf(sharedChunk.getSizeBytes()))
+                .body(srb);
     }
 
     @PostMapping(path = "/api/file-sharing/file/bulk", consumes = "application/json", produces = "application/zip")
