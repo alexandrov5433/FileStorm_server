@@ -1,7 +1,9 @@
 package server.filestorm.controller;
 
+import java.io.BufferedOutputStream;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.zip.ZipOutputStream;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -12,12 +14,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.context.request.async.DeferredResult;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import server.filestorm.exception.FileManagementException;
+import server.filestorm.exception.StorageException;
 import server.filestorm.model.entity.Chunk;
 import server.filestorm.model.entity.User;
 import server.filestorm.model.entity.Chunk.ShareOption;
 import server.filestorm.model.type.ApiResponse;
+import server.filestorm.model.type.BulkManipulationData;
 import server.filestorm.model.type.CustomSession;
 import server.filestorm.model.type.authentication.UserReference;
 import server.filestorm.model.type.fileManagement.ChunkReference;
@@ -28,6 +33,7 @@ import server.filestorm.service.UserService;
 import server.filestorm.thread.ThreadExecutorService;
 import server.filestorm.util.CustomHttpServletRequestWrapper;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 @Controller
 public class FileSharing {
@@ -327,4 +333,31 @@ public class FileSharing {
 
         return res;
     }
+
+    @PostMapping(path = "/api/file-sharing/file/bulk", consumes = "application/json", produces = "application/zip")
+    public ResponseEntity<StreamingResponseBody> bulkDownloadFilesSharedWithMe(
+            @RequestBody BulkManipulationData buldDownloadData,
+            CustomHttpServletRequestWrapper req) {
+        CustomSession session = req.getCustomSession();
+        Long userId = session.getUserId();
+        User user = userService.findById(userId);
+
+        Long[] chunkIds = buldDownloadData.getChunks();
+
+        Chunk[] chunks = chunkService.bulkConfirmSharedWithMeAndCollect(chunkIds, user);
+
+        StreamingResponseBody srb = out -> {
+            try (ZipOutputStream zipOutputStream = new ZipOutputStream(out)) {
+                fileSystemService.zipEtities(zipOutputStream, chunks, null);
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new StorageException("Erro occured while streaming the file.", e);
+            }
+        };
+
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=\"FileStorm.zip\"")
+                .body(srb);
+    }
+
 }
