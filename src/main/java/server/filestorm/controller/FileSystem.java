@@ -6,7 +6,6 @@ import java.util.Arrays;
 import java.util.zip.ZipOutputStream;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.Resource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -61,38 +60,38 @@ public class FileSystem {
     private ThreadExecutorService threadExecutorService;
 
     @GetMapping("/api/file/{fileId}")
-    public DeferredResult<ResponseEntity<?>> downloadFile(
+    public ResponseEntity<StreamingResponseBody> downloadFile(
             @PathVariable Long fileId,
             CustomHttpServletRequestWrapper req) {
-        DeferredResult<ResponseEntity<?>> res = new DeferredResult<>();
 
-        Runnable process = () -> {
-            try {
-                CustomSession session = req.getCustomSession();
+        CustomSession session = req.getCustomSession();
 
-                Long userId = session.getUserId();
-                User user = userService.findById(userId);
-                Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
+        Long userId = session.getUserId();
+        User user = userService.findById(userId);
+        Chunk chunk = chunkService.findChunkByIdAndOwner(fileId, user);
 
-                // return file
-                Resource file = fileSystemService.loadAsResource(chunk);
-                res.setResult(ResponseEntity.ok()
-                        .header("Content-Type", chunk.getMimeType())
-                        .body(file));
+        StreamingResponseBody srb = out -> {
+            try (BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(out)) {
+                fileSystemService.streamFileToClient(chunk, bufferedOutputStream);
+
             } catch (Exception e) {
-                res.setErrorResult(e);
+                e.printStackTrace();
+                throw new StorageException("Erro occured while streaming the file.", e);
             }
         };
 
-        threadExecutorService.execute(process);
-
-        return res;
+        return ResponseEntity.ok()
+                .header("Content-Type", chunk.getMimeType())
+                .header("Content-Length", String.valueOf(chunk.getSizeBytes()))
+                .body(srb);
     }
 
     @GetMapping("/api/public/file/{fileId}/download")
     public ResponseEntity<StreamingResponseBody> downloadPublicFile(@PathVariable Long fileId) {
         // Interface StreamingResponseBody
-        // A controller method return value type for asynchronous request processing where the application can write directly to the response OutputStream without holding up the Servlet container thread.
+        // A controller method return value type for asynchronous request processing
+        // where the application can write directly to the response OutputStream without
+        // holding up the Servlet container thread.
         // https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/servlet/mvc/method/annotation/StreamingResponseBody.html
         Chunk chunk = chunkService.findPublicChunkById(fileId);
 
