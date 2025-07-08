@@ -33,6 +33,7 @@ import server.filestorm.model.type.fileManagement.ChunkReference;
 import server.filestorm.model.type.fileManagement.DirectoryCreationData;
 import server.filestorm.model.type.fileManagement.DirectoryReference;
 import server.filestorm.model.type.fileManagement.HydratedDirectoryReference;
+import server.filestorm.model.type.search.UserFileSearchResults;
 import server.filestorm.service.ChunkService;
 import server.filestorm.service.DirectoryService;
 import server.filestorm.service.FileSystemService;
@@ -84,6 +85,30 @@ public class FileSystem {
                 .header("Content-Type", chunk.getMimeType())
                 .header("Content-Length", String.valueOf(chunk.getSizeBytes()))
                 .body(srb);
+    }
+
+    @GetMapping("/api/search/file")
+    public DeferredResult<ResponseEntity<?>> searchThroughUserFiles(
+            @RequestParam String searchValue,
+            CustomHttpServletRequestWrapper req) {
+        DeferredResult<ResponseEntity<?>> res = new DeferredResult<>();
+
+        Runnable process = () -> {
+            try {
+                CustomSession session = req.getCustomSession();
+                Long userId = session.getUserId();
+                User user = userService.findById(userId);
+                UserFileSearchResults results = chunkService.searchUserFiles(searchValue, user);
+                res.setResult(ResponseEntity.ok()
+                        .body(new ApiResponse<UserFileSearchResults>("Search results.", results)));
+            } catch (Exception e) {
+                res.setErrorResult(e);
+            }
+        };
+
+        threadExecutorService.execute(process);
+
+        return res;
     }
 
     @GetMapping("/api/public/file/{fileId}/download")

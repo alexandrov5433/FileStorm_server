@@ -10,9 +10,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import server.filestorm.exception.FileManagementException;
 import server.filestorm.model.entity.Chunk;
+import server.filestorm.model.entity.Directory;
 import server.filestorm.model.entity.User;
 import server.filestorm.model.repository.ChunkRepository;
 import server.filestorm.model.type.fileManagement.ChunkReference;
+import server.filestorm.model.type.search.FileSearchResult;
+import server.filestorm.model.type.search.UserFileSearchResults;
 import server.filestorm.util.StringUtil;
 
 @Service
@@ -134,7 +137,9 @@ public class ChunkService {
     }
 
     /**
-     * Collects the Chunks for all given IDs if they are found and shered with the given User.
+     * Collects the Chunks for all given IDs if they are found and shered with the
+     * given User.
+     * 
      * @param chunkIds The wanted Chunks.
      * @param receiver The User with whom the Chunks must be shared.
      * @return All Chunks as an Array.
@@ -150,5 +155,54 @@ public class ChunkService {
             chunks.add(findChunkSharedWithUser(chunkId, receiver));
         }
         return chunks.toArray(new Chunk[0]);
+    }
+
+    public UserFileSearchResults searchUserFiles(String searchValue, User searchingUser) {
+        UserFileSearchResults results = new UserFileSearchResults();
+        if (searchValue == null || searchValue.length() == 0) {
+            return results;
+        }
+
+        List<Chunk> chunksForUser = chunkRepository.searchChunksForUser(searchValue, searchingUser)
+                .orElse(new ArrayList<Chunk>());
+        List<Chunk> sharedChunksForUser = chunkRepository.searchChunksSharedWithUser(searchValue, searchingUser)
+                .orElse(new ArrayList<Chunk>());
+
+        FileSearchResult[] chunksForMyStorage = chunksForUser
+                .stream()
+                .map((Chunk chunk) -> {
+                    List<Object> directoryPath = extractDirPathInFormatForClient(chunk.getDirectory(), null);
+                    ChunkReference chunkReference = new ChunkReference(chunk);
+                    return new FileSearchResult(directoryPath.toArray(new Object[0]), chunkReference);
+                })
+                .collect(Collectors.toList())
+                .toArray(new FileSearchResult[0]);
+
+        FileSearchResult[] chunksForSharedWithMe = sharedChunksForUser
+                .stream()
+                .map((Chunk chunk) -> {
+                    return new FileSearchResult(null, new ChunkReference(chunk));
+                })
+                .collect(Collectors.toList())
+                .toArray(new FileSearchResult[0]);
+
+        results.setMyStorageResults(chunksForMyStorage);
+        results.setSharedWithMeResults(chunksForSharedWithMe);
+        return results;
+    }
+
+    private List<Object> extractDirPathInFormatForClient(Directory dir, List<Object> dirPath) {
+        if (dirPath == null) {
+            dirPath = new ArrayList<Object>();
+        }
+        if (dir.getParentDirectory().isPresent()) {
+            dirPath.addFirst(new Object[] { dir.getId(), dir.getName() });
+            Directory parentDir = dir.getParentDirectory().get();
+            return extractDirPathInFormatForClient(parentDir, dirPath);
+        } else {
+            dirPath.addFirst(new Object[] { dir.getId(), "My Storage" });
+        }
+
+        return dirPath;
     }
 }

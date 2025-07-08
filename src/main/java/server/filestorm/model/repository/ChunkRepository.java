@@ -22,4 +22,10 @@ public interface ChunkRepository extends JpaRepository<Chunk, Long>{
 
     @Query("SELECT c FROM Chunk c WHERE c.isFavorite = TRUE AND c.owner = ?1")
     Optional<List<Chunk>> getFavoritesForUser(User owner);
+
+    @Query("SELECT c FROM Chunk c WHERE LOWER(c.originalFileName) LIKE LOWER(CONCAT('%', ?1, '%')) AND c.owner = ?2 ORDER BY c.originalFileName ASC")
+    Optional<List<Chunk>> searchChunksForUser(String searchValue, User owner);
+
+    @Query("SELECT c FROM Chunk c JOIN c.shareWith u WHERE LOWER(c.originalFileName) LIKE LOWER(CONCAT('%', ?1, '%')) AND u = ?2 ORDER BY c.originalFileName ASC")
+    Optional<List<Chunk>> searchChunksSharedWithUser(String seachValue, User user);
 }
