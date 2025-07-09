@@ -38,12 +38,15 @@ public class RouteGuard implements Filter {
         // Authentication - not protected
         // FileSystem
         endpointMap.put("/api/file.*", "^GET|POST|DELETE|PATCH$");
-        endpointMap.put("/api/directory.*", "^GET|POST|DELETE$");
+        endpointMap.put("/api/directory.*", "^GET|POST|DELETE|PATCH$");
+        endpointMap.put("/api/search.*", "^GET$");
         // FileSharing
         endpointMap.put("/api/file-sharing.*", "^GET|POST|PATCH$");
         endpointMap.put("/api/users", "^GET$");
         // Favorite
         endpointMap.put("/api/favorite.*", "^GET|POST|DELETE$");
+        // UserData
+        endpointMap.put("/api/user-data/bytesInStorage", "^GET$");
 
         Iterator<Entry<String, String>> iterator = endpointMap.entrySet().iterator();
 
