@@ -2,7 +2,6 @@ package server.filestorm.service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -14,6 +13,7 @@ import server.filestorm.model.entity.Chunk;
 import server.filestorm.model.entity.Directory;
 import server.filestorm.model.entity.User;
 import server.filestorm.model.repository.DirectoryRepository;
+import server.filestorm.util.StringUtil;
 
 @Service
 public class DirectoryService {
@@ -51,6 +51,9 @@ public class DirectoryService {
     @Transactional
     public Directory createNewDirectory(String name, User owner, Directory parentDirectory) {
         Directory dir = new Directory();
+        while (doesDirectoryIncludeSubdirectoryWithThisName(parentDirectory, name)) {
+            name = StringUtil.appendUniqueCounter(name);
+        }
         dir.setName(name);
         dir.setOwner(owner);
         dir.setParentDirectory(parentDirectory);
@@ -173,20 +176,33 @@ public class DirectoryService {
         return false;
     }
 
+    /**
+     * Checks if the given Directory includes a subdirectory with the same name as
+     * the given nameToCheck.
+     * 
+     * @param directory   The Directory in which to check.
+     * @param nameToCheck The name the availability of which must be checked.
+     * @return True if a subdirectory (subDir.getName().equals(nameToCheck)) with
+     *         the given nameToCheck exists in the directory, false otherwise.
+     */
+    public Boolean doesDirectoryIncludeSubdirectoryWithThisName(Directory directory, String nameToCheck) {
+        List<Directory> allSubdirectories = directory.getSubdirectories();
+        for (Directory subDir : allSubdirectories) {
+            if (subDir.getName().equals(nameToCheck)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Transactional
     public Directory changeDirectoryName(Directory directory, String newName) {
         Directory parentDirectory = directory.getParentDirectory()
                 .orElseThrow(() -> new FileManagementException("This directory can not be renamed."));
 
         // check directory name avilability
-        List<String> allDirNamesInParentDir = parentDirectory.getSubdirectories()
-            .stream()
-            .map(Directory::getName)
-            .collect(Collectors.toList());
-        for (String otherName : allDirNamesInParentDir) {
-            if (otherName.equals(newName)) {
-                throw new FileManagementException("A directory with this name already exists here.");
-            }
+        if (doesDirectoryIncludeSubdirectoryWithThisName(parentDirectory, newName)) {
+            throw new FileManagementException("A directory with this name already exists here.");
         }
 
         directory.setName(newName);

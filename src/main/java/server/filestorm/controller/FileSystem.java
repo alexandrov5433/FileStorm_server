@@ -385,7 +385,7 @@ public class FileSystem {
                 if (newDirName == null || newDirName.length() == 0) {
                     throw new FileManagementException(
                             "The name of the new directory is not valid.");
-                }
+                }      
 
                 // check target dir (sub dir)
                 Directory parentDirectory = directoryService.findDirectoryForUserById(targetDirectoryId, user);
