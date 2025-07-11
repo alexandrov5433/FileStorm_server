@@ -42,6 +42,8 @@ public class FileSystemService {
 
     private final Path rootLocation;
 
+    private final String clientLocation;
+
     public FileSystemService(ServerConfigurationProperties confProps, ChunkService chunkService,
             DirectoryService directoryService, UserService userService) {
         if (confProps.getFileStorageLocation().trim().length() == 0) {
@@ -51,6 +53,7 @@ public class FileSystemService {
         this.chunkService = chunkService;
         this.directoryService = directoryService;
         this.userService = userService;
+        this.clientLocation = confProps.getClientLocation();
     }
 
     /**
@@ -161,9 +164,26 @@ public class FileSystemService {
                 } else {
                     IOUtils.copy(fileInputStream, bufferedOutputStream);
                 }
-            } 
+            }
         } catch (Exception e) {
             throw new StorageException("Could not read file: " + chunk.getName(), e);
+        }
+    }
+
+    public void streamFileStormIndexHtmlToClient(BufferedOutputStream bufferedOutputStream) {
+        try {
+            Path path = Path.of(this.clientLocation);
+            boolean isValidFile = this.verifyExistance(path);
+            if (!isValidFile) {
+                throw new StorageException("File could not be accessed.");
+            }
+            File fileStormApp = path.toFile();
+
+            try (FileInputStream fileInputStream = new FileInputStream(fileStormApp)) {
+                IOUtils.copy(fileInputStream, bufferedOutputStream);
+            }
+        } catch (Exception e) {
+            throw new StorageException("Could not read the FileStorm app file.", e);
         }
     }
 

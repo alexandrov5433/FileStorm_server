@@ -18,7 +18,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import server.filestorm.model.type.CustomSession;
 import server.filestorm.util.CustomHttpServletRequestWrapper;
 
-@Order(2)
+@Order(3)
 @Component
 public class RouteGuard implements Filter {
 
