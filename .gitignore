@@ -31,3 +31,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Docker ###
+*.tar
+
+### Logging ###
+FileStorm_server.log
+filestorm_server.log
