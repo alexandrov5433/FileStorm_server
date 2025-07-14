@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
@@ -22,6 +24,8 @@ import server.filestorm.service.FileSystemService;
 @Order(1)
 @Component
 public class NonExistentPathHandler implements Filter {
+
+    Logger logger = LoggerFactory.getLogger(NonExistentPathHandler.class);
 
     @Autowired
     private FileSystemService fileSystemService;
@@ -50,7 +54,7 @@ public class NonExistentPathHandler implements Filter {
                 fileSystemService.streamFileStormIndexHtmlToClient(buffout);
 
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error(e.getMessage(), e);
             }
             return;
         }
