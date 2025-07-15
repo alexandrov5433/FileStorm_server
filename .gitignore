@@ -38,3 +38,4 @@ build/
 ### Logging ###
 FileStorm_server.log
 filestorm_server.log
+*.gz
