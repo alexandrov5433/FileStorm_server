@@ -1,0 +1,77 @@
+name: Java CI with Maven
+on:
+  push:
+    branches: [ "production" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+    - name: Build Java package with Maven
+      run: ./mvnw clean package -DskipTests
+    - name: Set up Docker
+      uses: docker/setup-docker-action@v4.3.0
+    - name: Create Docker image
+      run: docker build -t filestorm .
+    - name: Create filestorm.tar archive from image
+      run: docker save -o filestorm.tar filestorm
+    - name: Deploy to EC2
+      env:
+        EC2_KEY: ${{ secrets.EC2_KEY }}
+        FILESTORM_SERVER_PORT: ${{ secrets.FILESTORM_SERVER_PORT }}
+        FILESTORM_DB_URL: ${{ secrets.FILESTORM_DB_URL }}
+        FILESTORM_DB_USERNAME: ${{ secrets.FILESTORM_DB_USERNAME }}
+        FILESTORM_DB_PASSWORD: ${{ secrets.FILESTORM_DB_PASSWORD }}
+        FILESTORM_JWT_SECRET: ${{ secrets.FILESTORM_JWT_SECRET }}
+        FILESTORM_SSL_KEYSTORE_PATH: ${{ secrets.FILESTORM_SSL_KEYSTORE_PATH }}
+        FILESTORM_SSL_KEYSTORE_PASSWORD: ${{ secrets.FILESTORM_SSL_KEYSTORE_PASSWORD }}
+        FILESTORM_SSL_KEYSTORE_ALIAS: ${{ secrets.FILESTORM_SSL_KEYSTORE_ALIAS }}             
+      run: |
+        echo "$EC2_KEY" > ec2_key.pem
+        chmod 600 ec2_key.pem
+        scp -i ec2_key.pem -o StrictHostKeyChecking=no -r filestorm.tar admin@filestorm.pro:/home/admin/filestorm
+        ssh -i ec2_key.pem -o StrictHostKeyChecking=no admin@filestorm.pro << EOF
+          cd /
+          cd /home/admin/filestorm
+          sudo docker container stop filestorm || true
+          sudo docker rm filestorm || true
+          sudo docker rmi filestorm || true
+          sudo docker load --input filestorm.tar
+          sudo docker run --network=host --name filestorm --rm -d \
+            -v /home/admin/filestorm/static:/app/static \
+            -v /home/admin/filestorm/logs:/app/logs \
+            -v /home/admin/filestorm/filestorm_ssl:/app/filestorm_ssl \
+            -v /mnt/efs/fs1/filestorm_storage:/app/filestorm_storage \
+            -v /tmp:/app/tmp \
+            -e FILESTORM_SERVER_PORT=$FILESTORM_SERVER_PORT \
+            -e FILESTORM_DB_URL=$FILESTORM_DB_URL \
+            -e FILESTORM_DB_USERNAME=$FILESTORM_DB_USERNAME \
+            -e FILESTORM_DB_PASSWORD=$FILESTORM_DB_PASSWORD \
+            -e FILESTORM_RESOURCES_STATIC_LOCATIONS=file:/app/static/dist \
+            -e FILESTORM_FILE_STORAGE_LOCATION=/app/filestorm_storage \
+            -e FILESTORM_CLIENT_LOCATION=/app/static/dist/index.html \
+            -e FILESTORM_DOMAIN=https://filestorm.pro \
+            -e FILESTORM_JWT_SECRET=$FILESTORM_JWT_SECRET \
+            -e FILESTORM_MULTIPART_LOCATION=/app/tmp \
+            -e FILESTORM_SERVER_LOG=/app/logs/filestorm_server.log \
+            -e FILESTORM_SSL_ENABLED=true \
+            -e FILESTORM_SSL_KEYSTORE_PATH=$FILESTORM_SSL_KEYSTORE_PATH \
+            -e FILESTORM_SSL_KEYSTORE_PASSWORD=$FILESTORM_SSL_KEYSTORE_PASSWORD \
+            -e FILESTORM_SSL_KEYSTORE_ALIAS=$FILESTORM_SSL_KEYSTORE_ALIAS \
+            filestorm
+          rm -f filestorm.tar
+        EOF
+        
+        
+        
+
+          
+
