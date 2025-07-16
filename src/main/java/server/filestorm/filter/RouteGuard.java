@@ -46,7 +46,7 @@ public class RouteGuard implements Filter {
         // Favorite
         endpointMap.put("/api/favorite.*", "^GET|POST|DELETE$");
         // UserData
-        endpointMap.put("/api/user-data/bytesInStorage", "^GET$");
+        endpointMap.put("/api/user-data.*", "^GET$");
 
         Iterator<Entry<String, String>> iterator = endpointMap.entrySet().iterator();
 
