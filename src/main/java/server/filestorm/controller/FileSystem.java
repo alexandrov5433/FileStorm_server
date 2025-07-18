@@ -1,11 +1,15 @@
 package server.filestorm.controller;
 
 import java.io.BufferedOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.zip.ZipOutputStream;
 
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -59,6 +63,8 @@ public class FileSystem {
 
     @Autowired
     private ThreadExecutorService threadExecutorService;
+
+    Logger logger = LoggerFactory.getLogger(FileSystem.class);
 
     @GetMapping("/api/file/{fileId}")
     public ResponseEntity<StreamingResponseBody> downloadFile(
@@ -268,13 +274,16 @@ public class FileSystem {
         return res;
     }
 
-    @PostMapping(path = "/api/file/bulk", consumes = "application/json", produces = "application/zip")
+    @GetMapping(path = "/api/file/bulk", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> bulkDownloadFiles(
-            @RequestBody BulkManipulationData buldDownloadData,
+            @RequestParam String chunkIdsStr,
+            @RequestParam String directoryIdsStr,
             CustomHttpServletRequestWrapper req) {
         CustomSession session = req.getCustomSession();
         Long userId = session.getUserId();
         User user = userService.findById(userId);
+
+        BulkManipulationData buldDownloadData = StringUtil.extractManipulationData(chunkIdsStr, directoryIdsStr);
 
         Long[] chunkIds = buldDownloadData.getChunks();
         Long[] directoryIds = buldDownloadData.getDirectories();
@@ -283,13 +292,22 @@ public class FileSystem {
         Directory[] directories = directoryService.bulkCheckDirectoryOwnershipAndCollect(directoryIds, user);
 
         return ResponseEntity.ok()
-                .header("Content-Disposition", "attachment; filename=\"FileStorm.zip\"")
+                .header("Content-Disposition", "attachment; filename=\"FileStorm.tar\"")
+                .header(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
+                .header(HttpHeaders.EXPIRES, "0")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(out -> {
-                    try (ZipOutputStream zipOutputStream = new ZipOutputStream(out)) {
-                        fileSystemService.zipEtities(zipOutputStream, chunks, directories);
-                        zipOutputStream.finish();
+                    try (TarArchiveOutputStream tarOutputStream = new TarArchiveOutputStream(out)) {
+                        tarOutputStream.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
+                        fileSystemService.tarEtities(tarOutputStream, chunks, directories);
+                        try {
+                            tarOutputStream.finish();
+                        } catch (IOException e) {
+                            logger.warn("Client aborted download before tar finished.", e.getMessage());
+                        }
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        logger.error(e.getMessage(), e);
+                        throw new StorageException("Erro occured while streaming the file.", e);
                     }
                 });
     }
@@ -385,7 +403,7 @@ public class FileSystem {
                 if (newDirName == null || newDirName.length() == 0) {
                     throw new FileManagementException(
                             "The name of the new directory is not valid.");
-                }      
+                }
 
                 // check target dir (sub dir)
                 Directory parentDirectory = directoryService.findDirectoryForUserById(targetDirectoryId, user);

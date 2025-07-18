@@ -3,6 +3,7 @@ package server.filestorm.service;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
@@ -11,9 +12,9 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -341,58 +342,64 @@ public class FileSystemService {
         return (file.exists() && file.canRead() && file.canWrite());
     }
 
-    private void zipChunks(ZipOutputStream zipOutputStream, Chunk[] chunks, String containingDirPathInZip) {
+    private void tarChunks(TarArchiveOutputStream tarOutputStream, Chunk[] chunks, String containingDirPathInTar)
+            throws IOException {
         for (Chunk chunk : chunks) {
             File file = getAbsolutePath(chunk).toFile();
             try (FileInputStream fileInputStream = new FileInputStream(file)) {
-                zipOutputStream.putNextEntry(new ZipEntry(
-                        (containingDirPathInZip == null ? "" : containingDirPathInZip) + chunk.getOriginalFileName()));
+                TarArchiveEntry tarEntity = new TarArchiveEntry(
+                        file,
+                        (containingDirPathInTar == null ? "" : containingDirPathInTar) + chunk.getOriginalFileName());
 
-                // copy and copyLarge method from Apache Tomcat for coping data from one stream
-                // to another
-                boolean isChunkSizeOverTwoGB = chunk.getSizeBytes() >= Long.valueOf("2147483648") ? true : false;
-                if (isChunkSizeOverTwoGB) {
-                    IOUtils.copyLarge(fileInputStream, zipOutputStream);
-                } else {
-                    IOUtils.copy(fileInputStream, zipOutputStream);
+                tarOutputStream.putArchiveEntry(tarEntity);
+
+                byte[] bytes = new byte[2048];
+                Integer bytesCount;
+                while ((bytesCount = fileInputStream.read(bytes)) != -1) {
+                    tarOutputStream.write(bytes, 0, bytesCount);
                 }
-
-                zipOutputStream.closeEntry();
+                tarOutputStream.closeArchiveEntry();
 
             } catch (Exception e) {
                 e.printStackTrace();
-                continue;
+                throw e;
             }
         }
     }
 
-    private void zipDirectory(ZipOutputStream zipOutputStream, Directory directory, String containingDirPathInZip) {
+    private void tarDirectory(TarArchiveOutputStream tarOutputStream, Directory directory,
+            String containingDirPathInTar)
+            throws IOException {
         try {
-            // cteate new empty directory in the zip file
-            String dirPathInZip = (containingDirPathInZip == null ? "" : containingDirPathInZip) + directory.getName()
+            // cteate new empty directory in the tar file
+            String dirPathInTar = (containingDirPathInTar == null ? "" : containingDirPathInTar) + directory.getName()
                     + "/";
-            zipOutputStream.putNextEntry(new ZipEntry(dirPathInZip));
-            zipOutputStream.closeEntry();
+            TarArchiveEntry tarEntry = new TarArchiveEntry(dirPathInTar);
+            tarEntry.setMode(0755);
+            tarOutputStream.putArchiveEntry(tarEntry);
+            tarOutputStream.closeArchiveEntry();
 
             Chunk[] chunks = directory.getChunks().toArray(new Chunk[0]);
-            zipChunks(zipOutputStream, chunks, dirPathInZip);
+            tarChunks(tarOutputStream, chunks, dirPathInTar);
 
             Directory[] subdirectories = directory.getSubdirectories().toArray(new Directory[0]);
             for (Directory subdirectory : subdirectories) {
-                zipDirectory(zipOutputStream, subdirectory, dirPathInZip);
+                tarDirectory(tarOutputStream, subdirectory, dirPathInTar);
             }
         } catch (Exception e) {
             e.printStackTrace();
+            throw e;
         }
     }
 
-    public void zipEtities(ZipOutputStream zipOutputStream, Chunk[] chunks, Directory[] directories) {
+    public void tarEtities(TarArchiveOutputStream tarOutputStream, Chunk[] chunks, Directory[] directories)
+            throws IOException {
         if (chunks != null) {
-            zipChunks(zipOutputStream, chunks, null);
+            tarChunks(tarOutputStream, chunks, null);
         }
         if (directories != null) {
             for (Directory directory : directories) {
-                zipDirectory(zipOutputStream, directory, null);
+                tarDirectory(tarOutputStream, directory, null);
             }
         }
     }

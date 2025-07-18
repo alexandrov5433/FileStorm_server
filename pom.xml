@@ -87,6 +87,12 @@
 			<artifactId>hypersistence-utils-hibernate-63</artifactId>
 			<version>3.9.10</version>
 		</dependency>
+		<!-- .TAR file creation -->
+		<dependency>
+    		<groupId>org.apache.commons</groupId>
+    		<artifactId>commons-compress</artifactId>
+    		<version>1.24.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>

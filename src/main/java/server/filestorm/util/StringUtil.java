@@ -1,16 +1,22 @@
 package server.filestorm.util;
 
+import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import server.filestorm.exception.ProcessingException;
 import server.filestorm.model.entity.Chunk;
+import server.filestorm.model.type.BulkManipulationData;
 
 public class StringUtil {
 
     /**
-     * Makes the string unique by appending space with a counter like:" (1)". If a counter is present it is being incremented.
-     * @param arg The string to make unique. String.trim() is applied before processing.
+     * Makes the string unique by appending space with a counter like:" (1)". If a
+     * counter is present it is being incremented.
+     * 
+     * @param arg The string to make unique. String.trim() is applied before
+     *            processing.
      * @return The updated string.
      */
     public static String appendUniqueCounter(String arg) {
@@ -49,7 +55,8 @@ public class StringUtil {
      * 
      * @param name String to sanitize.
      * @return The sanitized and trimmed string.
-     * @throws ProcessingException When the name argument is null or it's length is 0. Also when length becomes 0 after sanitization.
+     * @throws ProcessingException When the name argument is null or it's length is
+     *                             0. Also when length becomes 0 after sanitization.
      */
     public static String sanitizeFileName(String name) throws ProcessingException {
         if (name == null || name.length() == 0) {
@@ -66,17 +73,48 @@ public class StringUtil {
 
     /**
      * Extracts the file exrention form the name property of the Chunk.
+     * 
      * @param c The Chunk from which the file extention is extracted.
      * @return The file extention - e.g. ".jpg".
      */
     public static String extractFileExtention(Chunk c) {
         String name = c.getName();
         int extentionDotIndex = name.lastIndexOf((int) '.');
-        // converting char to int gives the UTF-16 code unit of that char - which is the same as the Unicode code point
+        // converting char to int gives the UTF-16 code unit of that char - which is the
+        // same as the Unicode code point
         if (extentionDotIndex < 0 || extentionDotIndex > name.length()) {
-            // String.substring throws IndexOutOfBoundsException if beginIndex is negative or larger than the length of this String object.
+            // String.substring throws IndexOutOfBoundsException if beginIndex is negative
+            // or larger than the length of this String object.
             return "";
         }
         return name.substring(extentionDotIndex);
+    }
+
+    public static BulkManipulationData extractManipulationData(String chunkIdsStr, String directoryIdsStr) {
+        BulkManipulationData bmd = new BulkManipulationData();
+
+        Long[] chunkIds;
+        if (chunkIdsStr == null || chunkIdsStr.isEmpty()) {
+            chunkIds = new Long[0];
+        } else {
+            chunkIds = Arrays.stream(chunkIdsStr.split("_"))
+                    .map(Long::valueOf)
+                    .collect(Collectors.toList())
+                    .toArray(new Long[0]);
+        }
+        bmd.setChunks(chunkIds);
+
+        Long[] directoryIds;
+        if (directoryIdsStr == null || directoryIdsStr.isEmpty()) {
+            directoryIds = new Long[0];
+        } else {
+            directoryIds = Arrays.stream(directoryIdsStr.split("\\|"))
+                    .map(Long::valueOf)
+                    .collect(Collectors.toList())
+                    .toArray(new Long[0]);
+        }
+        bmd.setDirectories(directoryIds);
+
+        return bmd;
     }
 }

@@ -1,11 +1,16 @@
 package server.filestorm.controller;
 
 import java.io.BufferedOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.zip.ZipOutputStream;
 
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -31,8 +36,9 @@ import server.filestorm.service.SharingService;
 import server.filestorm.service.UserService;
 import server.filestorm.thread.ThreadExecutorService;
 import server.filestorm.util.CustomHttpServletRequestWrapper;
+import server.filestorm.util.StringUtil;
+
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 
 @Controller
 public class FileSharing {
@@ -51,6 +57,8 @@ public class FileSharing {
 
     @Autowired
     private ThreadExecutorService threadExecutorService;
+
+    private Logger logger = LoggerFactory.getLogger(FileSharing.class);
 
     @GetMapping("/api/file-sharing/share_with")
     public DeferredResult<ResponseEntity<ApiResponse<?>>> getShareWithForFileOfUser(
@@ -329,29 +337,40 @@ public class FileSharing {
                 .body(srb);
     }
 
-    @PostMapping(path = "/api/file-sharing/file/bulk", consumes = "application/json", produces = "application/zip")
+    @GetMapping(path = "/api/file-sharing/file/bulk", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<StreamingResponseBody> bulkDownloadFilesSharedWithMe(
-            @RequestBody BulkManipulationData buldDownloadData,
+            @RequestParam String chunkIdsStr,
             CustomHttpServletRequestWrapper req) {
         CustomSession session = req.getCustomSession();
         Long userId = session.getUserId();
         User user = userService.findById(userId);
+
+        BulkManipulationData buldDownloadData = StringUtil.extractManipulationData(chunkIdsStr, null);
 
         Long[] chunkIds = buldDownloadData.getChunks();
 
         Chunk[] chunks = chunkService.bulkConfirmSharedWithMeAndCollect(chunkIds, user);
 
         StreamingResponseBody srb = out -> {
-            try (ZipOutputStream zipOutputStream = new ZipOutputStream(out)) {
-                fileSystemService.zipEtities(zipOutputStream, chunks, null);
+            try (TarArchiveOutputStream tarOutputStream = new TarArchiveOutputStream(out)) {
+                tarOutputStream.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
+                fileSystemService.tarEtities(tarOutputStream, chunks, null);
+                try {
+                    tarOutputStream.finish();
+                } catch (IOException e) {
+                    logger.warn("Client aborted download before tar finished.", e.getMessage());
+                }
             } catch (Exception e) {
-                e.printStackTrace();
+                logger.error(e.getMessage(), e);
                 throw new StorageException("Erro occured while streaming the file.", e);
             }
         };
 
         return ResponseEntity.ok()
-                .header("Content-Disposition", "attachment; filename=\"FileStorm.zip\"")
+                .header("Content-Disposition", "attachment; filename=\"FileStorm.tar\"")
+                .header(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
+                .header(HttpHeaders.EXPIRES, "0")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(srb);
     }
 
