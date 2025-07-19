@@ -76,7 +76,6 @@ public class Directory {
 
     @PreUpdate
     private void preUpdate() {
-        this.elementsCount = this.chunks.size() + this.subdirectories.size();
         this.lastModified = new Date().getTime();
     }
 

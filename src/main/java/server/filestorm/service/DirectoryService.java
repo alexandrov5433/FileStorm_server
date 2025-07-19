@@ -16,6 +16,7 @@ import server.filestorm.model.repository.DirectoryRepository;
 import server.filestorm.util.StringUtil;
 
 @Service
+@Transactional
 public class DirectoryService {
 
     @Autowired
@@ -32,7 +33,6 @@ public class DirectoryService {
      * @param owner The user owner of the root directory.
      * @return The newly created directory.
      */
-    @Transactional
     public Directory createNewDirectory(String name, User owner) {
         Directory dir = new Directory();
         dir.setName(name);
@@ -48,7 +48,6 @@ public class DirectoryService {
      * @param owner The user owner of the directory.
      * @return The newly created directory.
      */
-    @Transactional
     public Directory createNewDirectory(String name, User owner, Directory parentDirectory) {
         Directory dir = new Directory();
         while (doesDirectoryIncludeSubdirectoryWithThisName(parentDirectory, name)) {
@@ -57,12 +56,28 @@ public class DirectoryService {
         dir.setName(name);
         dir.setOwner(owner);
         dir.setParentDirectory(parentDirectory);
+        this.incrementElementsCountByOne(parentDirectory);
         return directoryRepository.save(dir);
     }
 
-    @Transactional
     public void delete(Directory directory) {
         directoryRepository.delete(directory);
+    }
+
+    public void incrementElementsCountByOne(Long directoryId) {
+        directoryRepository.incrementElementsCountByOne(directoryId);
+    }
+
+    public void incrementElementsCountByOne(Directory directory) {
+        directoryRepository.incrementElementsCountByOne(directory.getId());
+    }
+
+    public void decrementElementsCountByOne(Long directoryId) {
+        directoryRepository.decrementElementsCountByOne(directoryId);
+    }
+    
+    public void decrementElementsCountByOne(Directory directory) {
+        directoryRepository.decrementElementsCountByOne(directory.getId());
     }
 
     public Directory findDirectoryForUserById(Long directoryId, User owner) throws StorageException {
@@ -70,7 +85,6 @@ public class DirectoryService {
                 .orElseThrow(() -> new StorageException("Directory could not be found."));
     }
 
-    @Transactional
     public Directory[] bulkCheckDirectoryOwnershipAndCollect(Long[] directoryIds, User owner) throws StorageException {
         if (directoryIds == null) {
             return new Directory[0];
@@ -90,7 +104,6 @@ public class DirectoryService {
      * @param dir The directory from which the chunk collection must start.
      * @return All collected chunks.
      */
-    @Transactional
     public ArrayList<Chunk> extractChunksFromDirAndSubDirs(Directory dir) {
         ArrayList<Chunk> chunks = new ArrayList<Chunk>(dir.getChunks());
         List<Directory> subdirectories = dir.getSubdirectories();
@@ -108,7 +121,6 @@ public class DirectoryService {
      * @param dirs The directories from which the chunk collection must start.
      * @return All collected chunks.
      */
-    @Transactional
     public ArrayList<Chunk> extractChunksFromDirAndSubDirs(Directory[] dirs) {
         ArrayList<Chunk> chunks = new ArrayList<Chunk>();
         for (Directory dir : dirs) {
@@ -127,7 +139,6 @@ public class DirectoryService {
      *            start.
      * @return All collected directories.
      */
-    @Transactional
     public ArrayList<Directory> extractDirectoriesFromDirAndSubDirs(Directory dir) {
         ArrayList<Directory> subdirectories = new ArrayList<Directory>(dir.getSubdirectories());
         for (Directory subdir : subdirectories) {
@@ -147,7 +158,6 @@ public class DirectoryService {
      * @param dirs The directories, from which the collection must start.
      * @return All collected directories.
      */
-    @Transactional
     public ArrayList<Directory> extractDirectoriesFromDirAndSubDirs(Directory[] dirs) {
         ArrayList<Directory> allDirs = new ArrayList<Directory>();
         for (Directory dir : allDirs) {
@@ -195,7 +205,6 @@ public class DirectoryService {
         return false;
     }
 
-    @Transactional
     public Directory changeDirectoryName(Directory directory, String newName) {
         Directory parentDirectory = directory.getParentDirectory()
                 .orElseThrow(() -> new FileManagementException("This directory can not be renamed."));
