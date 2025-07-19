@@ -242,6 +242,7 @@ public class FileSystemService {
                 continue;
             }
             d.getParentDirectory().ifPresent((parentDirectory) -> {
+                parentDirectory.removeSubdirectory(d);
                 directoryService.decrementElementsCountByOne(parentDirectory);
             });
             directoryService.delete(d);
