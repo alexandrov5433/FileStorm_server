@@ -248,7 +248,6 @@ public class FileSystemService {
         }
     }
 
-    
     public void deleteFile(Chunk chunk, User user) {
         chunkService.delete(chunk);
         deleteFileFromFileSystem(chunk);
@@ -349,7 +348,7 @@ public class FileSystemService {
         return (file.exists() && file.canRead() && file.canWrite());
     }
 
-    private void tarChunks(TarArchiveOutputStream tarOutputStream, Chunk[] chunks, String containingDirPathInTar)
+    public void tarChunks(TarArchiveOutputStream tarOutputStream, Chunk[] chunks, String containingDirPathInTar)
             throws IOException {
         for (Chunk chunk : chunks) {
             File file = getAbsolutePath(chunk).toFile();
@@ -374,7 +373,7 @@ public class FileSystemService {
         }
     }
 
-    private void tarDirectory(TarArchiveOutputStream tarOutputStream, Directory directory,
+    public void tarDirectory(TarArchiveOutputStream tarOutputStream, Directory directory,
             String containingDirPathInTar)
             throws IOException {
         try {
@@ -398,7 +397,7 @@ public class FileSystemService {
             throw e;
         }
     }
-
+    
     public void tarEtities(TarArchiveOutputStream tarOutputStream, Chunk[] chunks, Directory[] directories)
             throws IOException {
         if (chunks != null) {
