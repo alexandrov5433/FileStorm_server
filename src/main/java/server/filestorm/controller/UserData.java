@@ -32,8 +32,9 @@ public class UserData {
                 CustomSession session = req.getCustomSession();
                 Long userId = session.getUserId();
                 User user = userService.findById(userId);
+                Long bytesInStorage = userService.getCurrentBytesInStorage(user);
                 res.setResult(ResponseEntity.ok()
-                        .body(new ApiResponse<Long>("Ok", user.getBytesInStorage())));
+                        .body(new ApiResponse<Long>("Ok", bytesInStorage)));
             } catch (Exception e) {
                 res.setErrorResult(e);
             }

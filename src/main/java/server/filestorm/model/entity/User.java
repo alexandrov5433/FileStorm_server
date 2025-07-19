@@ -12,7 +12,6 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import server.filestorm.exception.StorageException;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 
@@ -33,10 +32,10 @@ public class User {
     private String email;
 
     @Column(name = "max_storage_space", nullable = false)
-    private Long maxStorageSpace = Long.valueOf("53687091200"); // 50GB
+    private Long maxStorageSpace = 53687091200L; // 50GB
 
     @Column(name = "bytes_in_storage", nullable = false)
-    private Long bytesInStorage = Long.valueOf("0");
+    private Long bytesInStorage = 0L;
 
     @Column(name = "chunks_shared_with_me")
     @ManyToMany(mappedBy = "shareWith")
@@ -50,10 +49,10 @@ public class User {
     @PrePersist
     public void prePersist() {
         if (this.bytesInStorage == null) {
-            this.bytesInStorage = Long.valueOf("0");
+            this.bytesInStorage = 0L;
         }
         if (this.maxStorageSpace == null) {
-            this.maxStorageSpace = Long.valueOf("53687091200"); // 50GB
+            this.maxStorageSpace = 53687091200L; // 50GB
         }
     }
 
@@ -99,22 +98,6 @@ public class User {
 
     public void setBytesInStorage(Long bytesInStorage) {
         this.bytesInStorage = bytesInStorage;
-    }
-
-    public Long addBytesInStorage(Long bytesToAdd) throws StorageException {
-        if (bytesToAdd < 0) {
-            throw new StorageException("Can not add a negative value to the storage tracker.");
-        }
-        bytesInStorage += bytesToAdd;
-        return bytesInStorage;
-    }
-
-    public Long removeBytesInStorage(Long bytesToRemove) {
-        bytesInStorage -= bytesToRemove;
-        if (bytesInStorage < (long) 0) {
-            bytesInStorage = (long) 0;
-        }
-        return bytesInStorage;
     }
 
     public Long getAvailableStorage() {

@@ -15,6 +15,7 @@ import server.filestorm.model.entity.User;
 import server.filestorm.model.repository.UserRepository;
 
 @Service
+@Transactional
 public class UserService {
 
     @Autowired
@@ -30,6 +31,32 @@ public class UserService {
 
     public User findUserByUsernameAndId(String username, Long id) {
         return userRepository.findUserByUsernameAndId(username, id).orElse(null);
+    }
+
+    public void increaseBytesInStorage(Long userId, Long bytesToAdd) {
+        userRepository.increaseBytesInStorage(userId, bytesToAdd);
+    }
+
+    public void increaseBytesInStorage(User user, Long bytesToAdd) {
+        userRepository.increaseBytesInStorage(user.getId(), bytesToAdd);
+    }
+
+    public void decreaseBytesInStorage(Long userId, Long bytesToRemove) {
+        userRepository.decreaseBytesInStorage(userId, bytesToRemove);
+    }
+
+    public void decreaseBytesInStorage(User user, Long bytesToRemove) {
+        userRepository.decreaseBytesInStorage(user.getId(), bytesToRemove);
+    }
+
+    public Long getCurrentBytesInStorage(Long userId) {
+        return userRepository.getCurrentBytesInStorage(userId)
+            .orElseThrow(() -> new AuthenticationException("A user with this ID was not found."));
+    }
+
+    public Long getCurrentBytesInStorage(User user) {
+        return userRepository.getCurrentBytesInStorage(user.getId())
+            .orElseThrow(() -> new AuthenticationException("A user with this ID was not found."));
     }
 
     /**
@@ -64,7 +91,6 @@ public class UserService {
                 .orElseThrow(() -> new AuthenticationException("User not found."));
     }
 
-    @Transactional
     public LinkedHashMap<String, Long> queryUsersByNameForFileSharing(String username, String usernameToExclude, Chunk fileToShare) {
         // null-check username
         username = username == null ? "" : username;
@@ -97,7 +123,6 @@ public class UserService {
         return users;
     }
 
-    @Transactional
     public void addRootStorageDirToUser(User user, Directory rootStorageDir) {
         user.setRootStorageDir(rootStorageDir);
     }
