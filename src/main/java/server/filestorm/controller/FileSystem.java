@@ -180,7 +180,9 @@ public class FileSystem {
 
                 // check storage space availability
                 Long fileSize = fileUploadData.getFile().getSize();
-                if (user.getMaxStorageSpace() - user.getBytesInStorage() < fileSize) {
+                Long bytesInStorage = userService.getCurrentBytesInStorage(user);
+                Long maxStorageSpace = user.getMaxStorageSpace();
+                if ( maxStorageSpace - bytesInStorage < fileSize) {
                     throw new FileManagementException("Not enough free storage space for this file.");
                 }
 

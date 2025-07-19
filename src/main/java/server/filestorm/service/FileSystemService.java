@@ -11,7 +11,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
-import java.util.Date;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
@@ -33,13 +32,14 @@ import server.filestorm.util.PathUtil;
 import server.filestorm.util.StringUtil;
 
 @Service
+@Transactional
 public class FileSystemService {
+
+    private final UserService userService;
 
     private final ChunkService chunkService;
 
     private final DirectoryService directoryService;
-
-    private final UserService userService;
 
     private final Path rootLocation;
 
@@ -53,8 +53,8 @@ public class FileSystemService {
         this.rootLocation = Paths.get(confProps.getFileStorageLocation());
         this.chunkService = chunkService;
         this.directoryService = directoryService;
-        this.userService = userService;
         this.clientLocation = confProps.getClientLocation();
+        this.userService = userService;
     }
 
     /**
@@ -67,7 +67,6 @@ public class FileSystemService {
      * @return The Chunk created for this file.
      * @throws FileManagementException
      */
-    @Transactional
     public Chunk store(FileUploadData fileUploadData, User user, Directory targetDirectory)
             throws FileManagementException {
         try {
@@ -99,6 +98,7 @@ public class FileSystemService {
             chunk.setSizeBytes(file.getSize());
             chunk.setMimeType(file.getContentType());
 
+            // save chunk for it to recieve an ID
             chunk = chunkService.saveChunk(chunk);
 
             String fileName = String.format("%1$s___%2$s", Long.toString(chunk.getId()), originalFileName);
@@ -106,15 +106,11 @@ public class FileSystemService {
             chunk.setAbsoluteFilePath(
                     getAbsolutePath(Long.toString(user.getId()), fileName).toString());
 
-            chunk = chunkService.saveChunk(chunk);
-
-            // make directory dirty and save it
-            targetDirectory.setLastModified(new Date().getTime());
-            directoryService.saveDirectory(targetDirectory);
+            // update directory
+            directoryService.incrementElementsCountByOne(targetDirectory);
 
             // increase bytesInStorage for user
-            user.addBytesInStorage(chunk.getSizeBytes());
-            userService.saveUser(user);
+            userService.increaseBytesInStorage(user, chunk.getSizeBytes());
 
             // build path to save file
             Path destinationFile = getAbsolutePath(chunk);
@@ -224,33 +220,44 @@ public class FileSystemService {
      * @param chunks      Chunks to delete.
      * @param owner       The user owner of the directories and chunks.
      */
-    @Transactional
     public void deleteDirectoriesAndFiles(
             ArrayList<Directory> directories,
             ArrayList<Chunk> chunks,
             User owner) {
-        for (Directory d : directories) {
-            if (d.getOwner().getId() != owner.getId()) {
-                continue;
-            }
-            directoryService.delete(d);
-        }
         for (Chunk c : chunks) {
             if (c.getOwner().getId() != owner.getId()) {
                 continue;
             }
             deleteFileFromFileSystem(c);
-            owner.removeBytesInStorage(c.getSizeBytes());
+
+            Directory parenDirectory = c.getDirectory();
+            parenDirectory.removeChunk(c);
+            directoryService.decrementElementsCountByOne(parenDirectory);
+
+            userService.decreaseBytesInStorage(owner, c.getSizeBytes());
             chunkService.delete(c);
+        }
+        for (Directory d : directories) {
+            if (d.getOwner().getId() != owner.getId()) {
+                continue;
+            }
+            d.getParentDirectory().ifPresent((parentDirectory) -> {
+                directoryService.decrementElementsCountByOne(parentDirectory);
+            });
+            directoryService.delete(d);
         }
     }
 
-    @Transactional
+    
     public void deleteFile(Chunk chunk, User user) {
         chunkService.delete(chunk);
         deleteFileFromFileSystem(chunk);
-        user.removeBytesInStorage(chunk.getSizeBytes());
-        userService.saveUser(user);
+
+        Directory parenDirectory = chunk.getDirectory();
+        parenDirectory.removeChunk(chunk);
+        directoryService.decrementElementsCountByOne(parenDirectory);
+
+        userService.decreaseBytesInStorage(user, chunk.getSizeBytes());
     }
 
     /**
