@@ -19,6 +19,7 @@ import server.filestorm.model.type.search.UserFileSearchResults;
 import server.filestorm.util.StringUtil;
 
 @Service
+@Transactional
 public class ChunkService {
 
     @Autowired
@@ -66,7 +67,6 @@ public class ChunkService {
         return chunks.toArray(new Chunk[0]);
     }
 
-    @Transactional
     public Chunk updateOriginalFileName(Chunk chunk, String newFileNameWithoutTheExtention)
             throws FileManagementException {
         String extention = StringUtil.extractFileExtention(chunk);
@@ -99,19 +99,16 @@ public class ChunkService {
                 .orElse(new ChunkReference[0]);
     }
 
-    @Transactional
     public void markChunkAsFavorite(Chunk c) {
         c.setIsFavorite(true);
         chunkRepository.save(c);
     }
 
-    @Transactional
     public void removeChunkFromFavorite(Chunk c) {
         c.setIsFavorite(false);
         chunkRepository.save(c);
     }
 
-    @Transactional
     public boolean removeUserFromShareWith(Chunk c, User u) {
         return c.getShareWith().remove(u);
     }
