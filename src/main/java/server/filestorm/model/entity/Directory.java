@@ -9,6 +9,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -39,14 +40,16 @@ public class Directory {
     @Column(name = "elements_count", nullable = false)
     private Integer elementsCount = 0;
 
-    @OneToMany(mappedBy = "directory", cascade = CascadeType.ALL, orphanRemoval = false)
+    @OneToMany(mappedBy = "directory", cascade = CascadeType.ALL, orphanRemoval = false, fetch = FetchType.EAGER)
     private List<Chunk> chunks = new ArrayList<Chunk>();
 
     @ManyToOne
     @JoinColumn(name = "parentDirectory_id", nullable = true)
     private Directory parentDirectory;
 
-    @OneToMany(mappedBy = "parentDirectory", cascade = CascadeType.ALL, orphanRemoval = false)
+    // fetch = FetchType.EAGER fixes:
+    // org.hibernate.LazyInitializationException: failed to lazily initialize a collection of role: server.filestorm.model.entity.Directory.subdirectories: could not initialize proxy - no Session
+    @OneToMany(mappedBy = "parentDirectory", cascade = CascadeType.ALL, orphanRemoval = false, fetch = FetchType.EAGER)
     private List<Directory> subdirectories = new ArrayList<Directory>();
 
     @Column(name = "created_on", nullable = false, updatable = false)
