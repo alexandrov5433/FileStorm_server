@@ -25,8 +25,7 @@ public class RateIPLog {
         this.ipLog.values().stream().forEach(IPRequestData::resetRequestCount);
     }
 
-    // 10min = 600000ms
-    @Scheduled(fixedDelay = 600000L)
+    @Scheduled(fixedDelay = 60000L)
     private void processBanned() {
         // unban banned IPs, if the ban duration is up
         this.ipLog.values().stream().forEach(IPRequestData::processBanned);
