@@ -21,7 +21,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import server.filestorm.service.FileSystemService;
 
-@Order(1)
+@Order(2)
 @Component
 public class NonExistentPathHandler implements Filter {
 

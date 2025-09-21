@@ -32,8 +32,8 @@ public class RateIPLog {
         this.ipLog.values().stream().forEach(IPRequestData::processBanned);
     }
 
-    // 2h = 7200000ms
-    @Scheduled(fixedDelay = 7200000L)
+    // 30min = 1800000ms
+    @Scheduled(fixedDelay = 1800000L)
     private void processStale() {
         // remove stale entries from ipLog to free up memory
         this.ipLog.entrySet().removeIf(entry -> entry.getValue().isStale());

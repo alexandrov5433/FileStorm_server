@@ -39,8 +39,8 @@ public class IPRequestData {
             return false;
         }
         long timeSinceLastRequest = new Date().getTime() - this.lastRequestTime;
-        // 2h = 7200000ms
-        return timeSinceLastRequest >= 7200000L;
+        // 30min = 1800000ms
+        return timeSinceLastRequest >= 1800000L;
     }
 
     public long getBannedUntil() {

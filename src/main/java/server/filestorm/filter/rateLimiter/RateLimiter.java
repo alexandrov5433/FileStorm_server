@@ -15,7 +15,7 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletResponse;
 
 @Component
-@Order(4)
+@Order(1)
 public class RateLimiter implements Filter {
 
   @Autowired
@@ -34,10 +34,6 @@ public class RateLimiter implements Filter {
       ipLog.addData(IP);
       filterChain.doFilter(req, res);
     } else {
-      // must check:
-      // - banned?
-      // - requests count exceeds allowed
-
       if (client.isBanned()) {
         // 425 Too Early
         httpRes.setStatus(425);

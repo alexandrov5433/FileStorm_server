@@ -17,7 +17,7 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 
-@Order(2)
+@Order(3)
 @Component
 public class SessionCookieChecker implements Filter {
 
